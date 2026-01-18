@@ -41,3 +41,6 @@ Frontend → Backend API → PostgreSQL → Analytics → Frontend
 ### Monitoring
 - Datadog API Key: Set in Render
 - Datadog Region: US
+
+## Developer
+***Hirotoshi Uchida***
