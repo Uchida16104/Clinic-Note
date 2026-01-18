@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" x-data="app()" :lang="lang">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clinic Note</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Alpine.js -->
+  <script defer src="https://unpkg.com/alpinejs@latest/dist/cdn.min.js"></script>
+
+  <!-- HTMX -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  <!-- hyperscript -->
+  <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+
+  <!-- AOS -->
+  <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
+  <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+
+  <!-- Shoelace -->
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.14.0/dist/shoelace.js"></script>
+
+  <!-- Iconify -->
+  <script src="https://code.iconify.design/3/3.1.0/iconify.min.js"></script>
+
+  <!-- Motion One -->
+  <script src="https://unpkg.com/motion@10.18.0/dist/motion.umd.js"></script>
+
+  <script defer src="/assets/js/app.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-800" x-init="init()">
+
+<header class="p-4 bg-white shadow flex justify-between">
+  <h1 class="text-xl font-bold">Clinic Note</h1>
+  <select x-model="lang" @change="loadLang()" class="border p-1">
+    <option value="en">English</option>
+    <option value="ja">日本語</option>
+  </select>
+</header>
+
+<main class="p-4 max-w-3xl mx-auto">
+  <h2 class="text-lg font-semibold mb-2" x-text="t('today')"></h2>
+
+  <textarea
+    class="w-full border rounded p-2"
+    rows="4"
+    x-model="memo"
+    placeholder="..."
+  ></textarea>
+
+  <button
+    class="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
+    @click="saveMemo"
+  >
+    <span x-text="t('save')"></span>
+  </button>
+</main>
+
+<script>AOS.init();</script>
+</body>
+</html>
