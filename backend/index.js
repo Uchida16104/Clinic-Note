@@ -1,23 +1,14 @@
-import express from 'express';
-import cors from 'cors';
-import { pool } from './db.js';
+import express from 'express'
+import cors from 'cors'
+import { basicAuth } from './auth.js'
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const app = express()
+app.use(cors())
+app.use(express.json())
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+app.get('/api/health', basicAuth, (req, res) => {
+  res.json({ status: 'ok', user: req.user })
+})
 
-app.post('/api/memo', async (req, res) => {
-  const { date, content } = req.body;
-  await pool.query(
-    'INSERT INTO memos(date, content) VALUES($1,$2)',
-    [date, content]
-  );
-  res.json({ success: true });
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+const PORT = process.env.PORT || 3000
+app.listen(PORT)
