@@ -446,6 +446,97 @@
                 }
             };
         }
+document.addEventListener('alpine:init', () => {
+    Alpine.effect(async () => {
+        const root = document.querySelector('[x-data]');
+        if (!root || !root.__x) return;
+        const state = root.__x.$data;
+        if (!state.selectedHospital || !state.selectedDepartment) return;
+
+        if (!state._memoDB) {
+            state._memoDB = new PouchDB('clinic-note-memos');
+        }
+
+        // Load local memos
+        const result = await state._memoDB.allDocs({ include_docs: true });
+        const localMemos = result.rows.map(r => r.doc);
+
+        // Merge API memos + Local memos
+        const merged = [...state.memos];
+        localMemos.forEach(lm => {
+            if (!merged.some(m => m.memo_date === lm.memo_date)) {
+                merged.push(lm);
+            }
+        });
+
+        state.memos = merged;
+        state.generateCalendar();
+    });
+});
+
+/* ===============================
+   Override saveMemo (Extension)
+   =============================== */
+
+const _originalSaveMemo = calendarData().saveMemo;
+
+calendarData().saveMemo = async function () {
+    await _originalSaveMemo.call(this);
+
+    if (!this._memoDB) {
+        this._memoDB = new PouchDB('clinic-note-memos');
+    }
+
+    const doc = {
+        _id: `memo-${this.selectedHospital}-${this.selectedDepartment}-${this.formatDate(this.selectedDate)}`,
+        memo_date: this.formatDate(this.selectedDate),
+        content: this.currentMemo,
+        hospital: this.selectedHospital,
+        department: this.selectedDepartment,
+        created_at: new Date().toISOString()
+    };
+
+    try {
+        await this._memoDB.put(doc);
+    } catch (e) {
+        if (e.status === 409) {
+            const old = await this._memoDB.get(doc._id);
+            doc._rev = old._rev;
+            await this._memoDB.put(doc);
+        }
+    }
+};
+
+/* ===============================
+   HTMX URL Sync
+   =============================== */
+document.body.setAttribute('hx-push-url', 'true');
+
+/* ===============================
+   BASIC Auth (Pseudo)
+   =============================== */
+if (!localStorage.getItem('basicAuthToken')) {
+    localStorage.setItem(
+        'basicAuthToken',
+        btoa('user:password')
+    );
+}
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/@motionone/dom/dist/motion.min.js"></script>
+<script src="https://unpkg.com/lottie-web/build/player/lottie.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<svg width="0" height="0">
+    <defs>
+        <linearGradient id="memoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#fde68a"/>
+            <stop offset="100%" stop-color="#fca5a5"/>
+        </linearGradient>
+    </defs>
+</svg>
+
+<script>
+motion.animate("sl-card", { opacity: [0, 1], y: [10, 0] }, { duration: 0.4 });
+</script>
 </body>
 </html>
