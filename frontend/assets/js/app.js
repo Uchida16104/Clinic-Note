@@ -1,43 +1,42 @@
-const API = 'https://clinic-note-api.onrender.com'
-
 function app() {
   return {
-    lang: 'ja',
-    dict: {},
     username: '',
     password: '',
     loggedIn: false,
-    memo: localStorage.getItem('memo') || '',
+    memo: '',
 
-    async init() {
-      await this.loadLang()
-    },
-
-    async loadLang() {
-      const res = await fetch(`/i18n/${this.lang}.json`)
-      this.dict = await res.json()
-    },
-
-    t(key) {
-      return this.dict[key] ?? key
+    init() {
+      console.log('Alpine initialized');
     },
 
     async login() {
-      const token = btoa(`${this.username}:${this.password}`)
-      const res = await fetch(`${API}/api/health`, {
-        headers: { Authorization: `Basic ${token}` }
-      })
+      const res = await fetch('https://clinic-note-api.onrender.com/auth/login', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + btoa(this.username + ':' + this.password)
+        }
+      });
+
       if (res.ok) {
-        this.loggedIn = true
-        localStorage.setItem('auth', token)
+        this.loggedIn = true;
       } else {
-        alert('Login failed')
+        alert('Login failed');
       }
     },
 
     async saveMemo() {
-      localStorage.setItem('memo', this.memo)
-      alert(this.t('saved'))
+      await fetch('https://clinic-note-api.onrender.com/memo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memo: this.memo })
+      });
+      alert('Saved');
+    },
+
+    async loadMemo() {
+      const res = await fetch('https://clinic-note-api.onrender.com/memo');
+      const data = await res.json();
+      this.memo = data.memo || '';
     }
   }
 }
