@@ -1,5 +1,6 @@
 {
+  "login": "Login",
   "today": "Today's Memo",
   "save": "Save",
-  "saved": "Memo saved"
+  "saved": "Saved"
 }
