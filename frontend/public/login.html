@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Note - ログイン</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
+    <link rel="stylesheet" href="../src/css/custom.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen flex items-center justify-center">
+    <div x-data="loginData()" x-init="init()" class="w-full max-w-md px-4">
+        <!-- Language Switcher -->
+        <div class="flex justify-end mb-4" data-aos="fade-down">
+            <sl-button-group label="Language">
+                <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                    <span class="iconify" data-icon="twemoji:flag-japan"></span>
+                </sl-button>
+                <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                    <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                </sl-button>
+            </sl-button-group>
+        </div>
+
+        <!-- Login Card -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8" data-aos="zoom-in">
+            <div class="text-center mb-8">
+                <span class="iconify text-6xl text-indigo-600 mb-4" data-icon="mdi:account-circle"></span>
+                <h2 class="text-3xl font-bold text-gray-800" x-text="translations[currentLang].title"></h2>
+                <p class="text-gray-600 mt-2" x-text="translations[currentLang].subtitle"></p>
+            </div>
+
+            <!-- BASIC Auth Form (Initial) -->
+            <form x-show="!basicAuthPassed" @submit.prevent="handleBasicAuth" class="space-y-6">
+                <sl-alert variant="primary" open>
+                    <span class="iconify slot-icon" data-icon="mdi:information"></span>
+                    <span x-text="translations[currentLang].basicAuthInfo"></span>
+                </sl-alert>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].basicUser"></label>
+                    <sl-input 
+                        x-model="basicAuth.username" 
+                        type="text" 
+                        :placeholder="translations[currentLang].basicUserPlaceholder"
+                        required
+                        size="large">
+                        <span slot="prefix" class="iconify" data-icon="mdi:account"></span>
+                    </sl-input>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].basicPass"></label>
+                    <sl-input 
+                        x-model="basicAuth.password" 
+                        type="password" 
+                        :placeholder="translations[currentLang].basicPassPlaceholder"
+                        required
+                        size="large"
+                        password-toggle>
+                        <span slot="prefix" class="iconify" data-icon="mdi:lock"></span>
+                    </sl-input>
+                </div>
+
+                <sl-button type="submit" variant="primary" size="large" class="w-full" :loading="loading">
+                    <span class="iconify mr-2" data-icon="mdi:shield-check"></span>
+                    <span x-text="translations[currentLang].basicAuthButton"></span>
+                </sl-button>
+            </form>
+
+            <!-- User Login Form -->
+            <form x-show="basicAuthPassed" @submit.prevent="handleLogin" class="space-y-6">
+                <sl-alert x-show="error" variant="danger" :open="error !== ''" closable @sl-after-hide="error = ''">
+                    <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
+                    <span x-text="error"></span>
+                </sl-alert>
+
+                <sl-alert x-show="success" variant="success" :open="success !== ''" closable @sl-after-hide="success = ''">
+                    <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                    <span x-text="success"></span>
+                </sl-alert>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].username"></label>
+                    <sl-input 
+                        x-model="credentials.username" 
+                        type="text" 
+                        :placeholder="translations[currentLang].usernamePlaceholder"
+                        required
+                        size="large">
+                        <span slot="prefix" class="iconify" data-icon="mdi:account"></span>
+                    </sl-input>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].password"></label>
+                    <sl-input 
+                        x-model="credentials.password" 
+                        type="password" 
+                        :placeholder="translations[currentLang].passwordPlaceholder"
+                        required
+                        size="large"
+                        password-toggle>
+                        <span slot="prefix" class="iconify" data-icon="mdi:lock"></span>
+                    </sl-input>
+                </div>
+
+                <sl-button type="submit" variant="primary" size="large" class="w-full" :loading="loading">
+                    <span class="iconify mr-2" data-icon="mdi:login"></span>
+                    <span x-text="translations[currentLang].loginButton"></span>
+                </sl-button>
+
+                <div class="text-center">
+                    <a href="/register.html" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                        <span x-text="translations[currentLang].registerLink"></span>
+                    </a>
+                </div>
+            </form>
+
+            <div class="mt-6 text-center">
+                <a href="/index.html" class="text-gray-600 hover:text-gray-800">
+                    <span class="iconify mr-1" data-icon="mdi:arrow-left"></span>
+                    <span x-text="translations[currentLang].backHome"></span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="../src/js/auth.js"></script>
+    <script>
+        function loginData() {
+            return {
+                currentLang: 'ja',
+                basicAuthPassed: false,
+                loading: false,
+                error: '',
+                success: '',
+                basicAuth: { username: '', password: '' },
+                credentials: { username: '', password: '' },
+                translations: {
+                    ja: {
+                        title: 'ログイン',
+                        subtitle: 'アカウントにアクセス',
+                        basicAuthInfo: '初回アクセス時はBASIC認証が必要です',
+                        basicUser: 'BASIC ユーザー名',
+                        basicUserPlaceholder: 'BASIC_USER を入力',
+                        basicPass: 'BASIC パスワード',
+                        basicPassPlaceholder: 'BASIC_PASSWORD を入力',
+                        basicAuthButton: 'BASIC認証',
+                        username: 'ユーザー名',
+                        usernamePlaceholder: 'ユーザー名を入力',
+                        password: 'パスワード',
+                        passwordPlaceholder: 'パスワードを入力',
+                        loginButton: 'ログイン',
+                        registerLink: 'アカウントをお持ちでない方はこちら',
+                        backHome: 'ホームに戻る'
+                    },
+                    en: {
+                        title: 'Login',
+                        subtitle: 'Access your account',
+                        basicAuthInfo: 'BASIC authentication required for initial access',
+                        basicUser: 'BASIC Username',
+                        basicUserPlaceholder: 'Enter BASIC_USER',
+                        basicPass: 'BASIC Password',
+                        basicPassPlaceholder: 'Enter BASIC_PASSWORD',
+                        basicAuthButton: 'BASIC Auth',
+                        username: 'Username',
+                        usernamePlaceholder: 'Enter username',
+                        password: 'Password',
+                        passwordPlaceholder: 'Enter password',
+                        loginButton: 'Login',
+                        registerLink: 'Don\'t have an account? Register',
+                        backHome: 'Back to Home'
+                    }
+                },
+                init() {
+                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                    this.currentLang = savedLang;
+                    const basicAuthToken = localStorage.getItem('basicAuthToken');
+                    if (basicAuthToken) {
+                        this.basicAuthPassed = true;
+                    }
+                    AOS.init({ duration: 1000, once: true });
+                },
+                switchLanguage(lang) {
+                    this.currentLang = lang;
+                    localStorage.setItem('clinicNoteLang', lang);
+                },
+                async handleBasicAuth() {
+                    this.loading = true;
+                    this.error = '';
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const basicAuthToken = btoa(`${this.basicAuth.username}:${this.basicAuth.password}`);
+                        const response = await fetch(`${API_URL}/api/auth/basic`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Basic ${basicAuthToken}`
+                            }
+                        });
+                        if (response.ok) {
+                            localStorage.setItem('basicAuthToken', basicAuthToken);
+                            this.basicAuthPassed = true;
+                            this.success = this.currentLang === 'ja' ? 'BASIC認証成功' : 'BASIC auth successful';
+                        } else {
+                            this.error = this.currentLang === 'ja' ? 'BASIC認証に失敗しました' : 'BASIC auth failed';
+                        }
+                    } catch (err) {
+                        this.error = this.currentLang === 'ja' ? '接続エラーが発生しました' : 'Connection error';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async handleLogin() {
+                    this.loading = true;
+                    this.error = '';
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const response = await fetch(`${API_URL}/api/auth/login`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Basic ${basicAuthToken}`
+                            },
+                            body: JSON.stringify(this.credentials)
+                        });
+                        const data = await response.json();
+                        if (response.ok) {
+                            localStorage.setItem('authToken', data.token);
+                            localStorage.setItem('userId', data.userId);
+                            this.success = this.currentLang === 'ja' ? 'ログイン成功！' : 'Login successful!';
+                            setTimeout(() => {
+                                window.location.href = '/dashboard.html';
+                            }, 1000);
+                        } else {
+                            this.error = data.message || (this.currentLang === 'ja' ? 'ログインに失敗しました' : 'Login failed');
+                        }
+                    } catch (err) {
+                        this.error = this.currentLang === 'ja' ? '接続エラーが発生しました' : 'Connection error';
+                    } finally {
+                        this.loading = false;
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>

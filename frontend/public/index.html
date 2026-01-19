@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Note - ホーム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/motion@10.16.4/dist/motion.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
+    <link rel="stylesheet" href="../src/css/custom.css">
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div x-data="appData()" x-init="init()" class="container mx-auto px-4 py-8">
+        <!-- Language Switcher -->
+        <div class="flex justify-end mb-4" data-aos="fade-down">
+            <sl-button-group label="Language">
+                <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                    <span class="iconify" data-icon="twemoji:flag-japan"></span> 日本語
+                </sl-button>
+                <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                    <span class="iconify" data-icon="twemoji:flag-united-states"></span> English
+                </sl-button>
+            </sl-button-group>
+        </div>
+
+        <!-- Hero Section -->
+        <div class="text-center mb-12" data-aos="fade-up">
+            <div id="lottie-medical" class="w-64 h-64 mx-auto mb-6"></div>
+            <h1 class="text-5xl font-bold text-indigo-900 mb-4" x-text="translations[currentLang].welcome"></h1>
+            <p class="text-xl text-gray-700 mb-8" x-text="translations[currentLang].subtitle"></p>
+        </div>
+
+        <!-- Features Swiper -->
+        <div class="swiper features-swiper mb-12" data-aos="fade-up" data-aos-delay="200">
+            <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                    <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                        <span class="iconify text-6xl text-blue-500 mb-4" data-icon="mdi:hospital-building"></span>
+                        <h3 class="text-2xl font-bold mb-2" x-text="translations[currentLang].feature1"></h3>
+                        <p class="text-gray-600" x-text="translations[currentLang].feature1Desc"></p>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                        <span class="iconify text-6xl text-green-500 mb-4" data-icon="mdi:calendar-check"></span>
+                        <h3 class="text-2xl font-bold mb-2" x-text="translations[currentLang].feature2"></h3>
+                        <p class="text-gray-600" x-text="translations[currentLang].feature2Desc"></p>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="bg-white rounded-2xl shadow-xl p-8 text-center">
+                        <span class="iconify text-6xl text-purple-500 mb-4" data-icon="mdi:chart-line"></span>
+                        <h3 class="text-2xl font-bold mb-2" x-text="translations[currentLang].feature3"></h3>
+                        <p class="text-gray-600" x-text="translations[currentLang].feature3Desc"></p>
+                    </div>
+                </div>
+            </div>
+            <div class="swiper-pagination"></div>
+            <div class="swiper-button-next"></div>
+            <div class="swiper-button-prev"></div>
+        </div>
+
+        <!-- CTA Buttons -->
+        <div class="flex flex-col sm:flex-row justify-center gap-4 mb-12" data-aos="zoom-in">
+            <sl-button variant="primary" size="large" href="/login.html" class="text-lg px-8 py-4">
+                <span class="iconify mr-2" data-icon="mdi:login"></span>
+                <span x-text="translations[currentLang].login"></span>
+            </sl-button>
+            <sl-button variant="success" size="large" href="/register.html" class="text-lg px-8 py-4">
+                <span class="iconify mr-2" data-icon="mdi:account-plus"></span>
+                <span x-text="translations[currentLang].register"></span>
+            </sl-button>
+        </div>
+
+        <!-- SVG Animation -->
+        <div class="flex justify-center" data-aos="fade-up" data-aos-delay="400">
+            <svg width="400" height="200" viewBox="0 0 400 200" class="animated-svg">
+                <defs>
+                    <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:rgb(99,102,241);stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:rgb(168,85,247);stop-opacity:1" />
+                    </linearGradient>
+                </defs>
+                <circle cx="100" cy="100" r="40" fill="url(#gradient1)" class="pulse-animation" />
+                <circle cx="200" cy="100" r="40" fill="url(#gradient1)" class="pulse-animation" style="animation-delay: 0.2s" />
+                <circle cx="300" cy="100" r="40" fill="url(#gradient1)" class="pulse-animation" style="animation-delay: 0.4s" />
+                <path d="M 100 100 L 200 100 L 300 100" stroke="url(#gradient1)" stroke-width="3" fill="none" class="draw-line" />
+            </svg>
+        </div>
+    </div>
+
+    <script src="../src/js/app.js"></script>
+    <script>
+        function appData() {
+            return {
+                currentLang: 'ja',
+                translations: {
+                    ja: {
+                        welcome: 'Clinic Noteへようこそ',
+                        subtitle: '通院管理をスマートに、健康をもっと身近に',
+                        feature1: '複数病院管理',
+                        feature1Desc: '複数の病院・診療科目を一括管理',
+                        feature2: 'スケジュール管理',
+                        feature2Desc: '通院日をカレンダーで視覚的に管理',
+                        feature3: 'データ分析',
+                        feature3Desc: '健康傾向を自動分析してレポート',
+                        login: 'ログイン',
+                        register: '新規登録'
+                    },
+                    en: {
+                        welcome: 'Welcome to Clinic Note',
+                        subtitle: 'Smart Hospital Visit Management for Better Health',
+                        feature1: 'Multi-Hospital Management',
+                        feature1Desc: 'Manage multiple hospitals and departments',
+                        feature2: 'Schedule Management',
+                        feature2Desc: 'Visual calendar for appointment tracking',
+                        feature3: 'Data Analytics',
+                        feature3Desc: 'Automatic health trend analysis and reports',
+                        login: 'Login',
+                        register: 'Sign Up'
+                    }
+                },
+                init() {
+                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                    this.currentLang = savedLang;
+                    AOS.init({ duration: 1000, once: true });
+                    this.initSwiper();
+                    this.initLottie();
+                    this.initMotion();
+                },
+                switchLanguage(lang) {
+                    this.currentLang = lang;
+                    localStorage.setItem('clinicNoteLang', lang);
+                },
+                initSwiper() {
+                    new Swiper('.features-swiper', {
+                        slidesPerView: 1,
+                        spaceBetween: 30,
+                        loop: true,
+                        autoplay: { delay: 3000, disableOnInteraction: false },
+                        pagination: { el: '.swiper-pagination', clickable: true },
+                        navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+                        breakpoints: {
+                            640: { slidesPerView: 2 },
+                            1024: { slidesPerView: 3 }
+                        }
+                    });
+                },
+                initLottie() {
+                    const animation = lottie.loadAnimation({
+                        container: document.getElementById('lottie-medical'),
+                        renderer: 'svg',
+                        loop: true,
+                        autoplay: true,
+                        path: 'https://assets2.lottiefiles.com/packages/lf20_5njp3vgg.json'
+                    });
+                },
+                initMotion() {
+                    const { animate } = Motion;
+                    animate('.pulse-animation', { scale: [1, 1.2, 1] }, { duration: 2, repeat: Infinity });
+                }
+            };
+        }
+    </script>
+</body>
+</html>
