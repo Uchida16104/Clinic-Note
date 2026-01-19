@@ -1,25 +1,43 @@
+const API = 'https://clinic-note-api.onrender.com'
+
 function app() {
   return {
-    lang: 'en',
+    lang: 'ja',
     dict: {},
-    memo: localStorage.getItem('todayMemo') || '',
+    username: '',
+    password: '',
+    loggedIn: false,
+    memo: localStorage.getItem('memo') || '',
 
     async init() {
-      await this.loadLang();
+      await this.loadLang()
     },
 
     async loadLang() {
-      const res = await fetch(`/i18n/${this.lang}.json`);
-      this.dict = await res.json();
+      const res = await fetch(`/i18n/${this.lang}.json`)
+      this.dict = await res.json()
     },
 
     t(key) {
-      return this.dict[key] || key;
+      return this.dict[key] ?? key
     },
 
-    saveMemo() {
-      localStorage.setItem('todayMemo', this.memo);
-      alert(this.t('saved'));
+    async login() {
+      const token = btoa(`${this.username}:${this.password}`)
+      const res = await fetch(`${API}/api/health`, {
+        headers: { Authorization: `Basic ${token}` }
+      })
+      if (res.ok) {
+        this.loggedIn = true
+        localStorage.setItem('auth', token)
+      } else {
+        alert('Login failed')
+      }
+    },
+
+    async saveMemo() {
+      localStorage.setItem('memo', this.memo)
+      alert(this.t('saved'))
     }
   }
 }
