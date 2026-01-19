@@ -43,21 +43,27 @@
         <div class="bg-white rounded-2xl shadow-xl p-6 mb-8" data-aos="fade-up">
             <h2 class="text-2xl font-bold mb-4" x-text="translations[currentLang].selectClinic"></h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <sl-select 
-                    :placeholder="translations[currentLang].hospitalPlaceholder" 
-                    x-model="selectedHospital"
-                    @sl-change="onHospitalChange()"
-                    size="large">
+                <sl-select
+                    :placeholder="translations[currentLang].hospitalPlaceholder"
+                    size="large"
+                    @sl-change="
+                    selectedHospital = $event.target.value;
+                    onHospitalChange();
+                    "
+                    >
                     <template x-for="hospital in hospitals" :key="hospital">
                         <sl-option :value="hospital" x-text="hospital"></sl-option>
                     </template>
                 </sl-select>
-                <sl-select 
-                    :placeholder="translations[currentLang].departmentPlaceholder" 
-                    x-model="selectedDepartment"
-                    @sl-change="onDepartmentChange()"
+                <sl-select
+                    :placeholder="translations[currentLang].departmentPlaceholder"
                     size="large"
-                    :disabled="!selectedHospital">
+                    :disabled="!selectedHospital"
+                    @sl-change="
+                    selectedDepartment = $event.target.value;
+                    onDepartmentChange();
+                    "
+                    >
                     <template x-for="dept in departments" :key="dept">
                         <sl-option :value="dept" x-text="dept"></sl-option>
                     </template>
