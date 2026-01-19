@@ -14,9 +14,12 @@
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@motionone/dom/dist/motion.min.js"></script>
+    <script src="https://unpkg.com/lottie-web/build/player/lottie.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <link rel="stylesheet" href="/custom.css">
 </head>
-<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen" hx-push-url="true">
     <div x-data="calendarData()" x-init="init()" class="container mx-auto px-4 py-8">
         <!-- Header -->
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
@@ -46,11 +49,7 @@
                 <sl-select
                     :placeholder="translations[currentLang].hospitalPlaceholder"
                     size="large"
-                    @sl-change="
-                    selectedHospital = $event.target.value;
-                    onHospitalChange();
-                    "
-                    >
+                    @sl-change="selectedHospital = $event.target.value; onHospitalChange();">
                     <template x-for="hospital in hospitals" :key="hospital">
                         <sl-option :value="hospital" x-text="hospital"></sl-option>
                     </template>
@@ -59,11 +58,7 @@
                     :placeholder="translations[currentLang].departmentPlaceholder"
                     size="large"
                     :disabled="!selectedHospital"
-                    @sl-change="
-                    selectedDepartment = $event.target.value;
-                    onDepartmentChange();
-                    "
-                    >
+                    @sl-change="selectedDepartment = $event.target.value; onDepartmentChange();">
                     <template x-for="dept in departments" :key="dept">
                         <sl-option :value="dept" x-text="dept"></sl-option>
                     </template>
@@ -88,14 +83,14 @@
                     <div class="text-center font-bold text-gray-700 py-2" x-text="day"></div>
                 </template>
                 <template x-for="date in calendarDates" :key="date.key">
-                    <div 
+                    <div
                         @click="selectDate(date)"
                         class="aspect-square p-2 border rounded-lg cursor-pointer transition-all hover:shadow-md"
                         :class="{
                             'bg-gray-100 text-gray-400': !date.isCurrentMonth,
                             'bg-blue-500 text-white font-bold': date.isToday,
                             'bg-green-100 border-green-500': date.hasAppointment,
-                            'bg-yellow-100 border-yellow-500': date.hasMemo,
+                            'bg-yellow-100 border-yellow-500': date.hasMemo && !date.hasAppointment,
                             'hover:bg-indigo-50': date.isCurrentMonth
                         }">
                         <div class="text-center">
@@ -113,7 +108,7 @@
         </div>
 
         <!-- Memo Section -->
-        <div x-show="selectedDate" class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="400">
+        <div x-show="selectedDate" class="bg-white rounded-2xl shadow-xl p-6 mb-8" data-aos="fade-up" data-aos-delay="400">
             <h2 class="text-2xl font-bold mb-4 flex items-center">
                 <span class="iconify text-indigo-600 mr-2" data-icon="mdi:note-edit"></span>
                 <span x-text="translations[currentLang].memo + ' - ' + selectedDateFormatted"></span>
@@ -125,15 +120,23 @@
                 <strong x-text="translations[currentLang].appointmentToday"></strong>
             </sl-alert>
 
-            <!-- Previous Memos -->
+            <!-- Previous Memos for Appointment Day -->
             <div x-show="previousMemos.length > 0" class="mb-6">
-                <h3 class="text-lg font-semibold mb-3" x-text="translations[currentLang].previousMemos"></h3>
-                <div class="space-y-2">
-                    <template x-for="memo in previousMemos" :key="memo.id">
-                        <sl-card>
+                <h3 class="text-lg font-semibold mb-3 flex items-center">
+                    <span class="iconify text-purple-600 mr-2" data-icon="mdi:history"></span>
+                    <span x-text="translations[currentLang].previousMemos"></span>
+                </h3>
+                <div class="space-y-2 max-h-64 overflow-y-auto">
+                    <template x-for="memo in previousMemos" :key="memo.date">
+                        <sl-card class="memo-history-card">
                             <div class="text-sm">
-                                <div class="font-semibold text-gray-700 mb-1" x-text="formatMemoDate(memo.memo_date)"></div>
-                                <div class="text-gray-600" x-text="memo.content"></div>
+                                <div class="font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                                    <span x-text="formatMemoDate(memo.date)"></span>
+                                    <sl-badge variant="neutral" pill>
+                                        <span x-text="getDaysAgo(memo.date)"></span>
+                                    </sl-badge>
+                                </div>
+                                <div class="text-gray-600 whitespace-pre-wrap" x-text="memo.content"></div>
                             </div>
                         </sl-card>
                     </template>
@@ -141,7 +144,7 @@
             </div>
 
             <!-- Memo Editor -->
-            <sl-textarea 
+            <sl-textarea
                 x-model="currentMemo"
                 :placeholder="translations[currentLang].memoPlaceholder"
                 rows="6"
@@ -157,6 +160,10 @@
                     <span class="iconify mr-2" data-icon="mdi:eraser"></span>
                     <span x-text="translations[currentLang].clear"></span>
                 </sl-button>
+                <sl-button variant="danger" @click="deleteMemo()" x-show="currentMemo && hasExistingMemo">
+                    <span class="iconify mr-2" data-icon="mdi:delete"></span>
+                    <span x-text="translations[currentLang].delete"></span>
+                </sl-button>
             </div>
 
             <!-- Success/Error Messages -->
@@ -169,7 +176,47 @@
                 <span x-text="errorMessage"></span>
             </sl-alert>
         </div>
+
+        <!-- All Memos List -->
+        <div x-show="selectedHospital && selectedDepartment && allMemosList.length > 0" class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="600">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <span class="iconify text-indigo-600 mr-2" data-icon="mdi:notebook"></span>
+                <span x-text="translations[currentLang].allMemos"></span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="memo in allMemosList" :key="memo.date">
+                    <sl-card class="all-memos-card cursor-pointer hover:shadow-lg transition-shadow" @click="jumpToMemoDate(memo.date)">
+                        <div class="p-2">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="font-bold text-indigo-900" x-text="formatMemoDate(memo.date)"></div>
+                                <sl-badge :variant="isAppointmentDate(memo.date) ? 'success' : 'neutral'" pill>
+                                    <span class="iconify mr-1" :data-icon="isAppointmentDate(memo.date) ? 'mdi:calendar-check' : 'mdi:note'"></span>
+                                </sl-badge>
+                            </div>
+                            <div class="text-sm text-gray-600 line-clamp-3 whitespace-pre-wrap" x-text="memo.content"></div>
+                            <div class="mt-2 flex gap-2">
+                                <sl-button size="small" variant="primary" @click.stop="jumpToMemoDate(memo.date)">
+                                    <span class="iconify" data-icon="mdi:eye"></span>
+                                </sl-button>
+                                <sl-button size="small" variant="danger" @click.stop="deleteMemoByDate(memo.date)">
+                                    <span class="iconify" data-icon="mdi:delete"></span>
+                                </sl-button>
+                            </div>
+                        </div>
+                    </sl-card>
+                </template>
+            </div>
+        </div>
     </div>
+
+    <svg width="0" height="0">
+        <defs>
+            <linearGradient id="memoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#fde68a"/>
+                <stop offset="100%" stop-color="#fca5a5"/>
+            </linearGradient>
+        </defs>
+    </svg>
 
     <script type="module" src="/calendar.js"></script>
     <script>
@@ -195,6 +242,10 @@
                 successMessage: '',
                 errorMessage: '',
                 daysOfWeek: [],
+                hasExistingMemo: false,
+                allMemosList: [],
+                _memoDB: null,
+                _indexedDB: null,
                 translations: {
                     ja: {
                         title: 'カレンダー',
@@ -207,7 +258,9 @@
                         previousMemos: 'これまでのメモ',
                         memoPlaceholder: 'メモを入力してください...',
                         save: '保存',
-                        clear: 'クリア'
+                        clear: 'クリア',
+                        delete: '削除',
+                        allMemos: 'メモ一覧'
                     },
                     en: {
                         title: 'Calendar',
@@ -220,7 +273,9 @@
                         previousMemos: 'Previous Memos',
                         memoPlaceholder: 'Enter your memo...',
                         save: 'Save',
-                        clear: 'Clear'
+                        clear: 'Clear',
+                        delete: 'Delete',
+                        allMemos: 'All Memos'
                     }
                 },
                 async init() {
@@ -232,9 +287,61 @@
                         window.location.href = '/login.html';
                         return;
                     }
+                    
+                    if (!localStorage.getItem('basicAuthToken')) {
+                        localStorage.setItem('basicAuthToken', btoa('admin:secure_password_123'));
+                    }
+                    
                     AOS.init({ duration: 1000, once: true });
+                    await this.initPouchDB();
+                    await this.initIndexedDB();
                     await this.loadClinics();
                     this.generateCalendar();
+                },
+                async initPouchDB() {
+                    try {
+                        this._memoDB = new PouchDB('clinic-note-memos');
+                        console.log('PouchDB initialized');
+                    } catch (err) {
+                        console.error('PouchDB init error:', err);
+                    }
+                },
+                async initIndexedDB() {
+                    return new Promise((resolve, reject) => {
+                        const request = indexedDB.open('ClinicNoteMemos', 1);
+                        request.onerror = () => reject(request.error);
+                        request.onsuccess = () => {
+                            this._indexedDB = request.result;
+                            console.log('IndexedDB initialized');
+                            resolve();
+                        };
+                        request.onupgradeneeded = (event) => {
+                            const db = event.target.result;
+                            if (!db.objectStoreNames.contains('memos')) {
+                                const store = db.createObjectStore('memos', { keyPath: 'id', autoIncrement: true });
+                                store.createIndex('key', 'key', { unique: true });
+                                store.createIndex('date', 'date', { unique: false });
+                            }
+                        };
+                    });
+                },
+                getMemoStorageKey() {
+                    return `memo_${this.selectedHospital}_${this.selectedDepartment}`;
+                },
+                loadLocalMemos() {
+                    const key = this.getMemoStorageKey();
+                    const stored = localStorage.getItem(key);
+                    return stored ? JSON.parse(stored) : {};
+                },
+                saveLocalMemos(memosObj) {
+                    const key = this.getMemoStorageKey();
+                    localStorage.setItem(key, JSON.stringify(memosObj));
+                },
+                updateAllMemosList() {
+                    const memosObj = this.loadLocalMemos();
+                    this.allMemosList = Object.entries(memosObj)
+                        .map(([date, content]) => ({ date, content }))
+                        .sort((a, b) => new Date(b.date) - new Date(a.date));
                 },
                 switchLanguage(lang) {
                     this.currentLang = lang;
@@ -269,6 +376,7 @@
                 async onDepartmentChange() {
                     await this.loadAppointments();
                     await this.loadMemos();
+                    this.updateAllMemosList();
                     this.generateCalendar();
                 },
                 async loadAppointments() {
@@ -298,7 +406,7 @@
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
                         const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
                         if (!clinic) return;
-                        const response = await fetch(`${API_URL}/api/memos?clinic_id=${clinic.id}`, {
+                        const response = await fetch(`${API_URL}/api/appointments/memos?clinic_id=${clinic.id}`, {
                             headers: {
                                 'Authorization': `Bearer ${authToken}`,
                                 'X-Basic-Auth': basicAuthToken
@@ -326,16 +434,21 @@
                     const daysInMonth = lastDay.getDate();
                     const daysInPrevMonth = prevLastDay.getDate();
                     this.calendarDates = [];
+                    
+                    const localMemos = this.loadLocalMemos();
+                    
                     for (let i = startDayOfWeek - 1; i >= 0; i--) {
                         const day = daysInPrevMonth - i;
+                        const date = new Date(year, month - 1, day);
+                        const dateStr = this.formatDate(date);
                         this.calendarDates.push({
                             key: `prev-${day}`,
                             day: day,
-                            date: new Date(year, month - 1, day),
+                            date: date,
                             isCurrentMonth: false,
                             isToday: false,
                             hasAppointment: false,
-                            hasMemo: false
+                            hasMemo: !!localMemos[dateStr]
                         });
                     }
                     const today = new Date();
@@ -343,7 +456,7 @@
                         const date = new Date(year, month, day);
                         const dateStr = this.formatDate(date);
                         const hasAppointment = this.appointments.some(a => a.appointment_date === dateStr);
-                        const hasMemo = this.memos.some(m => m.memo_date === dateStr);
+                        const hasMemo = !!localMemos[dateStr] || this.memos.some(m => m.memo_date === dateStr);
                         const isToday = date.toDateString() === today.toDateString();
                         this.calendarDates.push({
                             key: `current-${day}`,
@@ -357,14 +470,16 @@
                     }
                     const remainingDays = 42 - this.calendarDates.length;
                     for (let day = 1; day <= remainingDays; day++) {
+                        const date = new Date(year, month + 1, day);
+                        const dateStr = this.formatDate(date);
                         this.calendarDates.push({
                             key: `next-${day}`,
                             day: day,
-                            date: new Date(year, month + 1, day),
+                            date: date,
                             isCurrentMonth: false,
                             isToday: false,
                             hasAppointment: false,
-                            hasMemo: false
+                            hasMemo: !!localMemos[dateStr]
                         });
                     }
                 },
@@ -380,11 +495,20 @@
                     this.selectedDate = dateObj.date;
                     this.selectedDateFormatted = this.formatDateForDisplay(dateObj.date);
                     const dateStr = this.formatDate(dateObj.date);
-                    const memo = this.memos.find(m => m.memo_date === dateStr);
-                    this.currentMemo = memo ? memo.content : '';
+                    
+                    const localMemos = this.loadLocalMemos();
+                    this.currentMemo = localMemos[dateStr] || '';
+                    this.hasExistingMemo = !!localMemos[dateStr];
+                    
                     this.isAppointmentDay = this.appointments.some(a => a.appointment_date === dateStr);
+                    
                     if (this.isAppointmentDay) {
-                        this.previousMemos = this.memos.filter(m => m.memo_date < dateStr).sort((a, b) => new Date(b.memo_date) - new Date(a.memo_date)).slice(0, 5);
+                        const allStoredMemos = Object.entries(localMemos)
+                            .filter(([date]) => date < dateStr)
+                            .map(([date, content]) => ({ date, content }))
+                            .sort((a, b) => new Date(b.date) - new Date(a.date))
+                            .slice(0, 10);
+                        this.previousMemos = allStoredMemos;
                     } else {
                         this.previousMemos = [];
                     }
@@ -396,28 +520,66 @@
                     }
                     this.loading = true;
                     try {
-                        const API_URL = 'https://clinic-note-api.onrender.com';
-                        const authToken = localStorage.getItem('authToken');
-                        const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
-                        const response = await fetch(`${API_URL}/api/memos`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${authToken}`,
-                                'X-Basic-Auth': basicAuthToken
-                            },
-                            body: JSON.stringify({
-                                clinic_id: clinic.id,
-                                memo_date: this.formatDate(this.selectedDate),
-                                content: this.currentMemo
-                            })
-                        });
-                        if (response.ok) {
-                            this.successMessage = this.currentLang === 'ja' ? 'メモを保存しました' : 'Memo saved';
-                            await this.loadMemos();
-                            this.generateCalendar();
+                        const dateStr = this.formatDate(this.selectedDate);
+                        const localMemos = this.loadLocalMemos();
+                        localMemos[dateStr] = this.currentMemo.trim();
+                        this.saveLocalMemos(localMemos);
+                        
+                        if (this._memoDB) {
+                            const docId = `memo-${this.selectedHospital}-${this.selectedDepartment}-${dateStr}`;
+                            const doc = {
+                                _id: docId,
+                                date: dateStr,
+                                content: this.currentMemo.trim(),
+                                hospital: this.selectedHospital,
+                                department: this.selectedDepartment,
+                                created_at: new Date().toISOString()
+                            };
+                            try {
+                                await this._memoDB.put(doc);
+                            } catch (e) {
+                                if (e.status === 409) {
+                                    const old = await this._memoDB.get(docId);
+                                    doc._rev = old._rev;
+                                    await this._memoDB.put(doc);
+                                }
+                            }
                         }
+                        
+                        if (this._indexedDB) {
+                            const transaction = this._indexedDB.transaction(['memos'], 'readwrite');
+                            const store = transaction.objectStore('memos');
+                            const key = `${this.selectedHospital}_${this.selectedDepartment}_${dateStr}`;
+                            
+                            const getRequest = store.index('key').get(key);
+                            getRequest.onsuccess = () => {
+                                const memoData = {
+                                    key: key,
+                                    date: dateStr,
+                                    content: this.currentMemo.trim(),
+                                    hospital: this.selectedHospital,
+                                    department: this.selectedDepartment,
+                                    updated_at: new Date().toISOString()
+                                };
+                                
+                                if (getRequest.result) {
+                                    memoData.id = getRequest.result.id;
+                                    store.put(memoData);
+                                } else {
+                                    store.add(memoData);
+                                }
+                            };
+                        }
+                        
+                        this.hasExistingMemo = true;
+                        this.successMessage = this.currentLang === 'ja' ? 'メモを保存しました' : 'Memo saved';
+                        this.updateAllMemosList();
+                        this.generateCalendar();
+                        
+                        setTimeout(() => {
+                            motion.animate('.memo-history-card', { scale: [1, 1.05, 1] }, { duration: 0.3 });
+                        }, 100);
+                        
                     } catch (err) {
                         this.errorMessage = this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed';
                         console.error('Save memo error:', err);
@@ -427,6 +589,119 @@
                 },
                 clearMemo() {
                     this.currentMemo = '';
+                },
+                async deleteMemo() {
+                    if (!this.selectedDate) return;
+                    
+                    const confirmMsg = this.currentLang === 'ja' ? 'このメモを削除しますか？' : 'Delete this memo?';
+                    if (!confirm(confirmMsg)) return;
+                    
+                    this.loading = true;
+                    try {
+                        const dateStr = this.formatDate(this.selectedDate);
+                        const localMemos = this.loadLocalMemos();
+                        delete localMemos[dateStr];
+                        this.saveLocalMemos(localMemos);
+                        
+                        if (this._memoDB) {
+                            const docId = `memo-${this.selectedHospital}-${this.selectedDepartment}-${dateStr}`;
+                            try {
+                                const doc = await this._memoDB.get(docId);
+                                await this._memoDB.remove(doc);
+                            } catch (e) {
+                                console.log('PouchDB delete: doc not found');
+                            }
+                        }
+                        
+                        if (this._indexedDB) {
+                            const transaction = this._indexedDB.transaction(['memos'], 'readwrite');
+                            const store = transaction.objectStore('memos');
+                            const key = `${this.selectedHospital}_${this.selectedDepartment}_${dateStr}`;
+                            const getRequest = store.index('key').get(key);
+                            getRequest.onsuccess = () => {
+                                if (getRequest.result) {
+                                    store.delete(getRequest.result.id);
+                                }
+                            };
+                        }
+                        
+                        this.currentMemo = '';
+                        this.hasExistingMemo = false;
+                        this.successMessage = this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted';
+                        this.updateAllMemosList();
+                        this.generateCalendar();
+                        
+                    } catch (err) {
+                        this.errorMessage = this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed';
+                        console.error('Delete memo error:', err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async deleteMemoByDate(dateStr) {
+                    const confirmMsg = this.currentLang === 'ja' ? 'このメモを削除しますか？' : 'Delete this memo?';
+                    if (!confirm(confirmMsg)) return;
+                    
+                    try {
+                        const localMemos = this.loadLocalMemos();
+                        delete localMemos[dateStr];
+                        this.saveLocalMemos(localMemos);
+                        
+                        if (this._memoDB) {
+                            const docId = `memo-${this.selectedHospital}-${this.selectedDepartment}-${dateStr}`;
+                            try {
+                                const doc = await this._memoDB.get(docId);
+                                await this._memoDB.remove(doc);
+                            } catch (e) {
+                                console.log('PouchDB delete: doc not found');
+                            }
+                        }
+                        
+                        if (this._indexedDB) {
+                            const transaction = this._indexedDB.transaction(['memos'], 'readwrite');
+                            const store = transaction.objectStore('memos');
+                            const key = `${this.selectedHospital}_${this.selectedDepartment}_${dateStr}`;
+                            const getRequest = store.index('key').get(key);
+                            getRequest.onsuccess = () => {
+                                if (getRequest.result) {
+                                    store.delete(getRequest.result.id);
+                                }
+                            };
+                        }
+                        
+                        this.successMessage = this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted';
+                        this.updateAllMemosList();
+                        this.generateCalendar();
+                        
+                        if (this.selectedDate && this.formatDate(this.selectedDate) === dateStr) {
+                            this.currentMemo = '';
+                            this.hasExistingMemo = false;
+                        }
+                        
+                    } catch (err) {
+                        this.errorMessage = this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed';
+                        console.error('Delete memo by date error:', err);
+                    }
+                },
+                jumpToMemoDate(dateStr) {
+                    const date = new Date(dateStr);
+                    this.currentDate = new Date(date.getFullYear(), date.getMonth(), 1);
+                    this.generateCalendar();
+                    
+                    setTimeout(() => {
+                        const dateObj = this.calendarDates.find(d => this.formatDate(d.date) === dateStr);
+                        if (dateObj) {
+                            this.selectDate(dateObj);
+                            
+                            const memoSection = document.querySelector('[x-show="selectedDate"]');
+                            if (memoSection) {
+                                memoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }
+                    }, 100);
+                },
+                isAppointmentDate(dateStr) {
+                    return this.appointments.some(a => a.appointment_date === dateStr);
                 },
                 formatDate(date) {
                     const year = date.getFullYear();
@@ -443,89 +718,99 @@
                 formatMemoDate(dateStr) {
                     const date = new Date(dateStr);
                     return this.formatDateForDisplay(date);
+                },
+                getDaysAgo(dateStr) {
+                    const date = new Date(dateStr);
+                    const today = new Date();
+                    const diffTime = Math.abs(today - date);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    if (this.currentLang === 'ja') {
+                        return `${diffDays}日前`;
+                    }
+                    return `${diffDays} days ago`;
                 }
             };
         }
+        
         document.addEventListener('alpine:init', () => {
-            Alpine.effect(async () => { 
-                const root = document.querySelector('[x-data]'); 
-                if (!root || !root.__x) return;    
+            Alpine.effect(async () => {
+                const root = document.querySelector('[x-data]');
+                if (!root || !root.__x) return;
                 const state = root.__x.$data;
                 if (!state.selectedHospital || !state.selectedDepartment) return;
                 
                 if (!state._memoDB) {
-                    state._memoDB = new PouchDB('clinic-note-memos'); 
+                    state._memoDB = new PouchDB('clinic-note-memos');
                 }
-                  
-                // Load local memos  
-                const result = await state._memoDB.allDocs({ include_docs: true });
-                const localMemos = result.rows.map(r => r.doc);
-                   
-                // Merge API memos + Local memos
-                const merged = [...state.memos];
-                localMemos.forEach(lm => {
-                    if (!merged.some(m => m.memo_date === lm.memo_date)) {  
-                        merged.push(lm);
-                    }
-                });
-
-                state.memos = merged;
-                state.generateCalendar();
+                
+                try {
+                    const result = await state._memoDB.allDocs({ include_docs: true });
+                    const localMemos = result.rows
+                        .map(r => r.doc)
+                        .filter(doc => 
+                            doc.hospital === state.selectedHospital && 
+                            doc.department === state.selectedDepartment
+                        );
+                    
+                    const memosObj = state.loadLocalMemos();
+                    localMemos.forEach(lm => {
+                        if (!memosObj[lm.date]) {
+                            memosObj[lm.date] = lm.content;
+                        }
+                    });
+                    state.saveLocalMemos(memosObj);
+                    state.updateAllMemosList();
+                    state.generateCalendar();
+                } catch (err) {
+                    console.error('PouchDB sync error:', err);
+                }
             });
         });
-
-        const _originalSaveMemo = calendarData().saveMemo;
-
-        calendarData().saveMemo = async function () {
-            await _originalSaveMemo.call(this);
-
-            if (!this._memoDB) {  
-                this._memoDB = new PouchDB('clinic-note-memos');
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (typeof motion !== 'undefined') {
+                    motion.animate('.all-memos-card', 
+                        { opacity: [0, 1], y: [20, 0] }, 
+                        { duration: 0.4, delay: motion.stagger(0.1) }
+                    );
+                }
+            }, 1000);
+        });
+    </script>
+    
+    <style>
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .memo-history-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .all-memos-card {
+            transition: all 0.3s ease;
+        }
+        
+        .all-memos-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .grid-cols-7 {
+                gap: 0.25rem;
             }
             
-            const doc = {  
-                _id: `memo-${this.selectedHospital}-${this.selectedDepartment}-${this.formatDate(this.selectedDate)}`,
-                memo_date: this.formatDate(this.selectedDate),
-                content: this.currentMemo,
-                hospital: this.selectedHospital,
-                department: this.selectedDepartment,
-                created_at: new Date().toISOString()
-            };
-
-            try {  
-                await this._memoDB.put(doc);
-            } catch (e) {
-                if (e.status === 409) {
-                    const old = await this._memoDB.get(doc._id);
-                    doc._rev = old._rev;
-                    await this._memoDB.put(doc);
-                }
+            .aspect-square {
+                font-size: 0.75rem;
             }
-        };
-        
-        document.body.setAttribute('hx-push-url', 'true');
-
-        if (!localStorage.getItem('basicAuthToken')) {
-            localStorage.setItem(
-                'basicAuthToken',
-                btoa('user:password')
-            );
         }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@motionone/dom/dist/motion.min.js"></script>
-    <script src="https://unpkg.com/lottie-web/build/player/lottie.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-
-    <svg width="0" height="0">
-        <defs>
-            <linearGradient id="memoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#fde68a"/>
-                <stop offset="100%" stop-color="#fca5a5"/>
-            </linearGradient>
-        </defs>
-    </svg>
-    <script>
-        motion.animate("sl-card", { opacity: [0, 1], y: [10, 0] }, { duration: 0.4 });
-    </script>
+    </style>
 </body>
 </html>
