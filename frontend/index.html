@@ -2,10 +2,10 @@
 <html lang="en" x-data="app()" :lang="lang">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Clinic Note</title>
 
-  <!-- TailwindCSS -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Alpine.js -->
@@ -30,36 +30,44 @@
   <!-- Motion One -->
   <script src="https://unpkg.com/motion@10.18.0/dist/motion.umd.js"></script>
 
+  <!-- App CSS (FIX) -->
+  <link rel="stylesheet" href="/assets/css/app.css" />
+
+  <!-- App JS -->
   <script defer src="/assets/js/app.js"></script>
 </head>
-<body class="bg-gray-50 text-gray-800" x-init="init()">
+<body x-init="init()" class="bg-gray-50">
 
-<header class="p-4 bg-white shadow flex justify-between">
+<header class="p-4 bg-white shadow flex justify-between items-center">
   <h1 class="text-xl font-bold">Clinic Note</h1>
   <select x-model="lang" @change="loadLang()" class="border p-1">
-    <option value="en">English</option>
     <option value="ja">日本語</option>
+    <option value="en">English</option>
   </select>
 </header>
 
-<main class="p-4 max-w-3xl mx-auto">
-  <h2 class="text-lg font-semibold mb-2" x-text="t('today')"></h2>
+<main class="container" data-aos="fade-up">
 
-  <textarea
-    class="w-full border rounded p-2"
-    rows="4"
-    x-model="memo"
-    placeholder="..."
-  ></textarea>
+  <!-- Login -->
+  <template x-if="!loggedIn">
+    <div class="mb-4">
+      <input class="border p-2 w-full mb-2" x-model="username" placeholder="Username" />
+      <input type="password" class="border p-2 w-full mb-2" x-model="password" placeholder="Password" />
+      <button class="bg-blue-600 text-white px-4 py-2" @click="login" x-text="t('login')"></button>
+    </div>
+  </template>
 
-  <button
-    class="mt-2 bg-blue-600 text-white px-4 py-2 rounded"
-    @click="saveMemo"
-  >
-    <span x-text="t('save')"></span>
-  </button>
+  <!-- Memo -->
+  <template x-if="loggedIn">
+    <div>
+      <h2 class="font-semibold mb-2" x-text="t('today')"></h2>
+      <textarea class="border w-full p-2" rows="4" x-model="memo"></textarea>
+      <button class="bg-blue-600 text-white px-4 py-2 mt-2" @click="saveMemo" x-text="t('save')"></button>
+    </div>
+  </template>
+
 </main>
 
-<script>AOS.init();</script>
+<script>AOS.init()</script>
 </body>
 </html>
