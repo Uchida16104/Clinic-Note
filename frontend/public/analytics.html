@@ -13,93 +13,99 @@
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="/custom.css">
+    <style>
+        @media (max-width: 640px) {
+            .container { padding-left: 1rem; padding-right: 1rem; }
+            h1 { font-size: 1.875rem; }
+            h2 { font-size: 1.25rem; }
+            canvas { max-height: 250px; }
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="analyticsData()" x-init="init()" class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-8" data-aos="fade-down">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4" data-aos="fade-down">
             <div>
-                <h1 class="text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
-                <p class="text-gray-600 mt-2" x-text="translations[currentLang].subtitle"></p>
+                <h1 class="text-3xl sm:text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
+                <p class="text-gray-600 mt-2 text-sm sm:text-base" x-text="translations[currentLang].subtitle"></p>
             </div>
             <div class="flex gap-2">
                 <sl-button-group label="Language">
-                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'" size="small">
                         <span class="iconify" data-icon="twemoji:flag-japan"></span>
                     </sl-button>
-                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'" size="small">
                         <span class="iconify" data-icon="twemoji:flag-united-states"></span>
                     </sl-button>
                 </sl-button-group>
-                <sl-button variant="default" @click="window.location.href='/dashboard.html'">
+                <sl-button variant="default" @click="window.location.href='/dashboard.html'" size="small">
                     <span class="iconify" data-icon="mdi:arrow-left"></span>
                 </sl-button>
             </div>
         </div>
 
-        <!-- Loading State -->
         <div x-show="loading" class="text-center py-12">
             <sl-spinner style="font-size: 3rem;"></sl-spinner>
             <p class="mt-4 text-gray-600" x-text="translations[currentLang].loading"></p>
         </div>
 
-        <!-- Statistics Cards -->
-        <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-aos="fade-up">
+        <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8" data-aos="fade-up">
             <sl-card>
                 <div class="text-center p-4">
-                    <span class="iconify text-5xl text-blue-500 mb-3" data-icon="mdi:hospital-building"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalClinics"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalClinics"></div>
+                    <span class="iconify text-4xl sm:text-5xl text-blue-500 mb-3" data-icon="mdi:hospital-building"></span>
+                    <div class="text-2xl sm:text-3xl font-bold text-gray-800" x-text="stats.totalClinics"></div>
+                    <div class="text-sm sm:text-base text-gray-600 mt-2" x-text="translations[currentLang].totalClinics"></div>
                 </div>
             </sl-card>
             <sl-card>
                 <div class="text-center p-4">
-                    <span class="iconify text-5xl text-green-500 mb-3" data-icon="mdi:calendar-check"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalAppointments"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalAppointments"></div>
+                    <span class="iconify text-4xl sm:text-5xl text-green-500 mb-3" data-icon="mdi:calendar-check"></span>
+                    <div class="text-2xl sm:text-3xl font-bold text-gray-800" x-text="stats.totalAppointments"></div>
+                    <div class="text-sm sm:text-base text-gray-600 mt-2" x-text="translations[currentLang].totalAppointments"></div>
                 </div>
             </sl-card>
             <sl-card>
                 <div class="text-center p-4">
-                    <span class="iconify text-5xl text-purple-500 mb-3" data-icon="mdi:note-multiple"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalMemos"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalMemos"></div>
+                    <span class="iconify text-4xl sm:text-5xl text-purple-500 mb-3" data-icon="mdi:note-multiple"></span>
+                    <div class="text-2xl sm:text-3xl font-bold text-gray-800" x-text="stats.totalMemos"></div>
+                    <div class="text-sm sm:text-base text-gray-600 mt-2" x-text="translations[currentLang].totalMemos"></div>
                 </div>
             </sl-card>
         </div>
 
-        <!-- Charts -->
         <div x-show="!loading" class="space-y-8">
-            <!-- Appointments by Department -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="200">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6" data-aos="fade-up" data-aos-delay="200">
+                <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
                     <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-bar"></span>
                     <span x-text="translations[currentLang].appointmentsByDept"></span>
                 </h2>
-                <canvas id="departmentChart"></canvas>
+                <div class="relative" style="height: 300px;">
+                    <canvas id="departmentChart"></canvas>
+                </div>
             </div>
 
-            <!-- Appointment Frequency -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="400">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6" data-aos="fade-up" data-aos-delay="400">
+                <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
                     <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-line"></span>
                     <span x-text="translations[currentLang].appointmentFrequency"></span>
                 </h2>
-                <canvas id="frequencyChart"></canvas>
+                <div class="relative" style="height: 300px;">
+                    <canvas id="frequencyChart"></canvas>
+                </div>
             </div>
 
-            <!-- Department Analysis -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="600">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6" data-aos="fade-up" data-aos-delay="600">
+                <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
                     <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-pie"></span>
                     <span x-text="translations[currentLang].departmentDistribution"></span>
                 </h2>
-                <canvas id="pieChart"></canvas>
+                <div class="relative" style="height: 300px;">
+                    <canvas id="pieChart"></canvas>
+                </div>
             </div>
 
-            <!-- Trends Analysis -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="800">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6" data-aos="fade-up" data-aos-delay="800">
+                <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
                     <span class="iconify text-indigo-600 mr-2" data-icon="mdi:trending-up"></span>
                     <span x-text="translations[currentLang].trends"></span>
                 </h2>
@@ -107,13 +113,13 @@
                     <template x-for="trend in trends" :key="trend.department">
                         <sl-card>
                             <div class="p-4">
-                                <div class="flex justify-between items-center mb-2">
-                                    <h3 class="text-lg font-bold" x-text="trend.department"></h3>
+                                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
+                                    <h3 class="text-base sm:text-lg font-bold" x-text="trend.department"></h3>
                                     <sl-badge :variant="trend.trend === 'increasing' ? 'danger' : trend.trend === 'stable' ? 'primary' : 'success'">
                                         <span x-text="translations[currentLang][trend.trend]"></span>
                                     </sl-badge>
                                 </div>
-                                <div class="text-gray-600">
+                                <div class="text-sm sm:text-base text-gray-600">
                                     <p><strong x-text="translations[currentLang].visitCount"></strong>: <span x-text="trend.count"></span></p>
                                     <p><strong x-text="translations[currentLang].avgInterval"></strong>: <span x-text="trend.avgInterval"></span> <span x-text="translations[currentLang].days"></span></p>
                                     <p class="mt-2" x-text="trend.analysis"></p>
@@ -125,7 +131,6 @@
             </div>
         </div>
     </div>
-
     <script src="/analytics.js"></script>
     <script>
         function analyticsData() {
@@ -139,6 +144,8 @@
                 },
                 trends: [],
                 charts: {},
+                chartData: null,
+                syncInterval: null,
                 translations: {
                     ja: {
                         title: 'データ分析',
@@ -178,19 +185,31 @@
                     }
                 },
                 async init() {
-                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
-                    this.currentLang = savedLang;
-                    const authToken = localStorage.getItem('authToken');
-                    if (!authToken) {
-                        window.location.href = '/login.html';
-                        return;
+                    try {
+                        const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                        this.currentLang = savedLang;
+                        const authToken = localStorage.getItem('authToken');
+                        if (!authToken) {
+                            window.location.href = '/login.html';
+                            return;
+                        }
+                        AOS.init({ duration: 1000, once: true });
+                        await this.loadAnalytics();
+                        this.loading = false;
+                        this.$nextTick(() => {
+                            this.createCharts();
+                        });
+                        this.startAutoSync();
+                    } catch (error) {
+                        console.error('Initialization error:', error);
+                        this.loading = false;
                     }
-                    AOS.init({ duration: 1000, once: true });
-                    await this.loadAnalytics();
-                    this.loading = false;
-                    this.$nextTick(() => {
-                        this.createCharts();
-                    });
+                },
+                startAutoSync() {
+                    this.syncInterval = setInterval(async () => {
+                        await this.loadAnalytics();
+                        this.updateCharts();
+                    }, 60000);
                 },
                 switchLanguage(lang) {
                     this.currentLang = lang;
@@ -210,17 +229,21 @@
                         });
                         if (response.ok) {
                             const data = await response.json();
-                            this.stats = data.stats;
-                            this.trends = data.trends;
-                            this.chartData = data.chartData;
+                            this.stats = data.stats || { totalClinics: 0, totalAppointments: 0, totalMemos: 0 };
+                            this.trends = data.trends || [];
+                            this.chartData = data.chartData || { departments: [], departmentCounts: [], months: [], monthlyCounts: [] };
+                        } else {
+                            throw new Error('Failed to load analytics');
                         }
                     } catch (err) {
                         console.error('Load analytics error:', err);
+                        this.stats = { totalClinics: 0, totalAppointments: 0, totalMemos: 0 };
+                        this.trends = [];
+                        this.chartData = { departments: [], departmentCounts: [], months: [], monthlyCounts: [] };
                     }
                 },
                 createCharts() {
-                    if (!this.chartData) return;
-                    
+                    if (!this.chartData || !this.chartData.departments) return;
                     const ctx1 = document.getElementById('departmentChart');
                     if (ctx1) {
                         this.charts.department = new Chart(ctx1, {
@@ -237,7 +260,7 @@
                             },
                             options: {
                                 responsive: true,
-                                maintainAspectRatio: true,
+                                maintainAspectRatio: false,
                                 plugins: {
                                     legend: { display: true }
                                 },
@@ -247,7 +270,6 @@
                             }
                         });
                     }
-
                     const ctx2 = document.getElementById('frequencyChart');
                     if (ctx2) {
                         this.charts.frequency = new Chart(ctx2, {
@@ -265,7 +287,7 @@
                             },
                             options: {
                                 responsive: true,
-                                maintainAspectRatio: true,
+                                maintainAspectRatio: false,
                                 plugins: {
                                     legend: { display: true }
                                 },
@@ -275,7 +297,6 @@
                             }
                         });
                     }
-
                     const ctx3 = document.getElementById('pieChart');
                     if (ctx3) {
                         this.charts.pie = new Chart(ctx3, {
@@ -297,7 +318,7 @@
                             },
                             options: {
                                 responsive: true,
-                                maintainAspectRatio: true,
+                                maintainAspectRatio: false,
                                 plugins: {
                                     legend: { position: 'right' }
                                 }
@@ -308,11 +329,26 @@
                 updateCharts() {
                     if (this.charts.department) {
                         this.charts.department.data.datasets[0].label = this.translations[this.currentLang].totalAppointments;
+                        if (this.chartData && this.chartData.departments) {
+                            this.charts.department.data.labels = this.chartData.departments;
+                            this.charts.department.data.datasets[0].data = this.chartData.departmentCounts;
+                        }
                         this.charts.department.update();
                     }
                     if (this.charts.frequency) {
                         this.charts.frequency.data.datasets[0].label = this.translations[this.currentLang].totalAppointments;
+                        if (this.chartData && this.chartData.months) {
+                            this.charts.frequency.data.labels = this.chartData.months;
+                            this.charts.frequency.data.datasets[0].data = this.chartData.monthlyCounts;
+                        }
                         this.charts.frequency.update();
+                    }
+                    if (this.charts.pie) {
+                        if (this.chartData && this.chartData.departments) {
+                            this.charts.pie.data.labels = this.chartData.departments;
+                            this.charts.pie.data.datasets[0].data = this.chartData.departmentCounts;
+                        }
+                        this.charts.pie.update();
                     }
                 }
             };
