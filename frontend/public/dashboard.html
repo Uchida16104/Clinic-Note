@@ -15,55 +15,63 @@
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
     <link rel="stylesheet" href="/custom.css">
+    <style>
+        @media (max-width: 640px) {
+            .container { padding-left: 1rem; padding-right: 1rem; }
+            h1 { font-size: 1.875rem; }
+            h2 { font-size: 1.5rem; }
+            .grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        }
+        @media (min-width: 641px) and (max-width: 768px) {
+            .grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="dashboardData()" x-init="init()" class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-8" data-aos="fade-down">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4" data-aos="fade-down">
             <div>
-                <h1 class="text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
-                <p class="text-gray-600 mt-2" x-text="translations[currentLang].subtitle"></p>
+                <h1 class="text-3xl sm:text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
+                <p class="text-gray-600 mt-2 text-sm sm:text-base" x-text="translations[currentLang].subtitle"></p>
             </div>
             <div class="flex gap-2">
                 <sl-button-group label="Language">
-                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'" size="small">
                         <span class="iconify" data-icon="twemoji:flag-japan"></span>
                     </sl-button>
-                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'" size="small">
                         <span class="iconify" data-icon="twemoji:flag-united-states"></span>
                     </sl-button>
                 </sl-button-group>
-                <sl-button variant="danger" @click="logout()">
+                <sl-button variant="danger" @click="logout()" size="small">
                     <span class="iconify" data-icon="mdi:logout"></span>
                 </sl-button>
             </div>
         </div>
 
-        <!-- Navigation -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" data-aos="fade-up">
             <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="window.location.href='/calendar.html'">
                 <div class="text-center p-4">
-                    <span class="iconify text-6xl text-green-500 mb-4" data-icon="mdi:calendar"></span>
-                    <h3 class="text-xl font-bold" x-text="translations[currentLang].calendar"></h3>
+                    <span class="iconify text-4xl sm:text-6xl text-green-500 mb-4" data-icon="mdi:calendar"></span>
+                    <h3 class="text-lg sm:text-xl font-bold" x-text="translations[currentLang].calendar"></h3>
                 </div>
             </sl-card>
             <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="window.location.href='/analytics.html'">
                 <div class="text-center p-4">
-                    <span class="iconify text-6xl text-purple-500 mb-4" data-icon="mdi:chart-line"></span>
-                    <h3 class="text-xl font-bold" x-text="translations[currentLang].analytics"></h3>
+                    <span class="iconify text-4xl sm:text-6xl text-purple-500 mb-4" data-icon="mdi:chart-line"></span>
+                    <h3 class="text-lg sm:text-xl font-bold" x-text="translations[currentLang].analytics"></h3>
                 </div>
             </sl-card>
             <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="showAddClinicDialog = true">
                 <div class="text-center p-4">
-                    <span class="iconify text-6xl text-blue-500 mb-4" data-icon="mdi:hospital-building"></span>
-                    <h3 class="text-xl font-bold" x-text="translations[currentLang].addClinic"></h3>
+                    <span class="iconify text-4xl sm:text-6xl text-blue-500 mb-4" data-icon="mdi:hospital-building"></span>
+                    <h3 class="text-lg sm:text-xl font-bold" x-text="translations[currentLang].addClinic"></h3>
                 </div>
             </sl-card>
         </div>
 
-        <!-- Clinic List -->
-        <div class="bg-white rounded-2xl shadow-xl p-8" data-aos="fade-up" data-aos-delay="200">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
+        <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-8" data-aos="fade-up" data-aos-delay="200">
+            <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
                 <span class="iconify text-indigo-600 mr-2" data-icon="mdi:hospital-box"></span>
                 <span x-text="translations[currentLang].clinicList"></span>
             </h2>
@@ -78,41 +86,40 @@
                     <sl-card>
                         <div class="p-4">
                             <div class="flex justify-between items-start mb-3">
-                                <h3 class="text-lg font-bold text-indigo-900" x-text="clinic.hospital_name"></h3>
-                                <div class="flex gap-1">
-                                    <sl-badge variant="primary" x-text="clinic.department"></sl-badge>
+                                <h3 class="text-base sm:text-lg font-bold text-indigo-900 flex-1 pr-2" x-text="clinic.hospital_name"></h3>
+                                <div class="flex gap-1 flex-shrink-0">
+                                    <sl-badge variant="primary" class="text-xs" x-text="clinic.department"></sl-badge>
                                     <sl-icon-button name="pencil" label="Edit" @click="editClinic(clinic)"></sl-icon-button>
                                 </div>
                             </div>
                             <div class="space-y-2 text-sm">
                                 <div class="flex items-start">
-                                    <span class="iconify text-red-500 mr-2 mt-1" data-icon="mdi:medical-bag"></span>
-                                    <span class="text-gray-700" x-text="clinic.diagnosis"></span>
+                                    <span class="iconify text-red-500 mr-2 mt-1 flex-shrink-0" data-icon="mdi:medical-bag"></span>
+                                    <span class="text-gray-700 break-words" x-text="clinic.diagnosis"></span>
                                 </div>
                                 <div class="flex items-start">
-                                    <span class="iconify text-green-500 mr-2 mt-1" data-icon="mdi:pill"></span>
-                                    <span class="text-gray-700" x-text="clinic.medication"></span>
+                                    <span class="iconify text-green-500 mr-2 mt-1 flex-shrink-0" data-icon="mdi:pill"></span>
+                                    <span class="text-gray-700 break-words" x-text="clinic.medication"></span>
                                 </div>
-                                <!-- 通院日表示 -->
                                 <template x-if="getClinicAppointments(clinic.id).length > 0">
                                     <div class="mt-3 pt-3 border-t border-gray-200">
                                         <div class="text-xs font-semibold text-indigo-600 mb-2" x-text="translations[currentLang].upcomingAppointments"></div>
                                         <template x-for="appt in getClinicAppointments(clinic.id)" :key="appt.id">
-                                            <div class="flex items-center gap-2 text-xs text-gray-600 mb-1">
-                                                <span class="iconify" data-icon="mdi:calendar-clock"></span>
-                                                <span x-text="formatAppointmentDateTime(appt.appointment_date, appt.appointment_time)"></span>
+                                            <div class="flex items-center gap-2 text-xs text-gray-600 mb-1 flex-wrap">
+                                                <span class="iconify flex-shrink-0" data-icon="mdi:calendar-clock"></span>
+                                                <span class="flex-1" x-text="formatAppointmentDateTime(appt.appointment_date, appt.appointment_time)"></span>
                                                 <sl-icon-button name="trash" label="Delete" size="small" @click="deleteAppointment(appt.id)"></sl-icon-button>
                                             </div>
                                         </template>
                                     </div>
                                 </template>
                             </div>
-                            <div class="mt-4 flex gap-2">
-                                <sl-button size="small" variant="primary" @click="selectClinicForAppointment(clinic)">
+                            <div class="mt-4 flex flex-col sm:flex-row gap-2">
+                                <sl-button size="small" variant="primary" @click="selectClinicForAppointment(clinic)" class="w-full sm:w-auto">
                                     <span class="iconify" data-icon="mdi:calendar-plus"></span>
                                     <span x-text="translations[currentLang].addAppointmentBtn"></span>
                                 </sl-button>
-                                <sl-button size="small" variant="danger" @click="deleteClinic(clinic.id)">
+                                <sl-button size="small" variant="danger" @click="deleteClinic(clinic.id)" class="w-full sm:w-auto">
                                     <span class="iconify" data-icon="mdi:delete"></span>
                                 </sl-button>
                             </div>
@@ -122,54 +129,22 @@
             </div>
         </div>
 
-        <!-- Add/Edit Clinic Dialog -->
         <sl-dialog :open="showAddClinicDialog" @sl-request-close="closeClinicDialog()" :label="editingClinic ? translations[currentLang].editClinicTitle : translations[currentLang].addClinicTitle">
             <form @submit.prevent="saveClinic()" class="space-y-4">
-                <sl-input 
-                    x-model="newClinic.hospital_name" 
-                    :label="translations[currentLang].hospitalName"
-                    :placeholder="translations[currentLang].hospitalNamePlaceholder"
-                    required>
-                </sl-input>
-                <sl-input 
-                    x-model="newClinic.department" 
-                    :label="translations[currentLang].department"
-                    :placeholder="translations[currentLang].departmentPlaceholder"
-                    required>
-                </sl-input>
-                <sl-textarea 
-                    x-model="newClinic.diagnosis" 
-                    :label="translations[currentLang].diagnosis"
-                    :placeholder="translations[currentLang].diagnosisPlaceholder"
-                    rows="3">
-                </sl-textarea>
-                <sl-textarea 
-                    x-model="newClinic.medication" 
-                    :label="translations[currentLang].medication"
-                    :placeholder="translations[currentLang].medicationPlaceholder"
-                    rows="3">
-                </sl-textarea>
+                <sl-input x-model="newClinic.hospital_name" :label="translations[currentLang].hospitalName" :placeholder="translations[currentLang].hospitalNamePlaceholder" required></sl-input>
+                <sl-input x-model="newClinic.department" :label="translations[currentLang].department" :placeholder="translations[currentLang].departmentPlaceholder" required></sl-input>
+                <sl-textarea x-model="newClinic.diagnosis" :label="translations[currentLang].diagnosis" :placeholder="translations[currentLang].diagnosisPlaceholder" rows="3"></sl-textarea>
+                <sl-textarea x-model="newClinic.medication" :label="translations[currentLang].medication" :placeholder="translations[currentLang].medicationPlaceholder" rows="3"></sl-textarea>
                 <sl-button type="submit" variant="primary" class="w-full" :loading="loading">
                     <span x-text="translations[currentLang].save"></span>
                 </sl-button>
             </form>
         </sl-dialog>
 
-        <!-- Add Appointment Dialog -->
         <sl-dialog :open="showAppointmentDialog" @sl-request-close="showAppointmentDialog = false" :label="translations[currentLang].addAppointmentTitle">
             <form @submit.prevent="addAppointment()" class="space-y-4">
-                <sl-input 
-                    type="date" 
-                    x-model="newAppointment.date" 
-                    :label="translations[currentLang].appointmentDate"
-                    required>
-                </sl-input>
-                <sl-input 
-                    type="time" 
-                    x-model="newAppointment.time" 
-                    :label="translations[currentLang].appointmentTime"
-                    required>
-                </sl-input>
+                <sl-input type="date" x-model="newAppointment.date" :label="translations[currentLang].appointmentDate" required></sl-input>
+                <sl-input type="time" x-model="newAppointment.time" :label="translations[currentLang].appointmentTime" required></sl-input>
                 <sl-button type="submit" variant="success" class="w-full" :loading="loading">
                     <span x-text="translations[currentLang].save"></span>
                 </sl-button>
@@ -191,6 +166,8 @@
                 newClinic: { hospital_name: '', department: '', diagnosis: '', medication: '' },
                 newAppointment: { date: '', time: '' },
                 notificationCheckInterval: null,
+                syncInterval: null,
+                db: null,
                 translations: {
                     ja: {
                         title: 'ダッシュボード',
@@ -262,14 +239,58 @@
                             window.location.href = '/login.html';
                             return;
                         }
+                        await this.initPouchDB();
                         AOS.init({ duration: 1000, once: true });
                         await this.loadClinics();
                         await this.loadAppointments();
                         await this.requestNotificationPermission();
                         this.startNotificationCheck();
+                        this.startAutoSync();
                     } catch (error) {
                         console.error('Initialization error:', error);
                     }
+                },
+                async initPouchDB() {
+                    try {
+                        const userId = localStorage.getItem('userId') || 'user';
+                        this.db = new PouchDB(`clinic-note-${userId}`);
+                        const remoteDB = new PouchDB('https://clinic-note-api.onrender.com/db/' + userId, {
+                            skip_setup: true
+                        });
+                        this.db.sync(remoteDB, {
+                            live: true,
+                            retry: true
+                        }).on('change', (info) => {
+                            console.log('Sync change:', info);
+                            this.loadFromLocal();
+                        }).on('error', (err) => {
+                            console.log('Sync error:', err);
+                        });
+                    } catch (err) {
+                        console.error('PouchDB init error:', err);
+                    }
+                },
+                async loadFromLocal() {
+                    try {
+                        if (!this.db) return;
+                        const allDocs = await this.db.allDocs({ include_docs: true });
+                        const clinicDocs = allDocs.rows.filter(r => r.id.startsWith('clinic_')).map(r => r.doc);
+                        const apptDocs = allDocs.rows.filter(r => r.id.startsWith('appointment_')).map(r => r.doc);
+                        if (clinicDocs.length > 0) {
+                            this.clinics = clinicDocs;
+                        }
+                        if (apptDocs.length > 0) {
+                            this.appointments = apptDocs;
+                        }
+                    } catch (err) {
+                        console.error('Load from local error:', err);
+                    }
+                },
+                startAutoSync() {
+                    this.syncInterval = setInterval(async () => {
+                        await this.loadClinics();
+                        await this.loadAppointments();
+                    }, 30000);
                 },
                 switchLanguage(lang) {
                     this.currentLang = lang;
@@ -287,13 +308,31 @@
                             }
                         });
                         if (response.ok) {
-                            this.clinics = await response.json();
+                            const data = await response.json();
+                            this.clinics = data;
+                            if (this.db) {
+                                for (const clinic of data) {
+                                    try {
+                                        const docId = `clinic_${clinic.id}`;
+                                        const doc = { ...clinic, _id: docId };
+                                        await this.db.put(doc).catch(async (e) => {
+                                            if (e.status === 409) {
+                                                const old = await this.db.get(docId);
+                                                doc._rev = old._rev;
+                                                await this.db.put(doc);
+                                            }
+                                        });
+                                    } catch (err) {
+                                        console.error('Save clinic to local error:', err);
+                                    }
+                                }
+                            }
                         } else {
                             throw new Error('Failed to load clinics');
                         }
                     } catch (err) {
                         console.error('Load clinics error:', err);
-                        this.clinics = [];
+                        await this.loadFromLocal();
                     }
                 },
                 async loadAppointments() {
@@ -308,22 +347,39 @@
                             }
                         });
                         if (response.ok) {
-                            this.appointments = await response.json();
+                            const data = await response.json();
+                            this.appointments = data;
+                            if (this.db) {
+                                for (const appt of data) {
+                                    try {
+                                        const docId = `appointment_${appt.id}`;
+                                        const doc = { ...appt, _id: docId };
+                                        await this.db.put(doc).catch(async (e) => {
+                                            if (e.status === 409) {
+                                                const old = await this.db.get(docId);
+                                                doc._rev = old._rev;
+                                                await this.db.put(doc);
+                                            }
+                                        });
+                                    } catch (err) {
+                                        console.error('Save appointment to local error:', err);
+                                    }
+                                }
+                            }
                         } else {
                             throw new Error('Failed to load appointments');
                         }
                     } catch (err) {
                         console.error('Load appointments error:', err);
-                        this.appointments = [];
+                        await this.loadFromLocal();
                     }
                 },
                 getClinicAppointments(clinicId) {
-                    return this.appointments.filter(appt => appt.clinic_id === clinicId)
-                        .sort((a, b) => {
-                            const dateA = new Date(a.appointment_date + ' ' + a.appointment_time);
-                            const dateB = new Date(b.appointment_date + ' ' + b.appointment_time);
-                            return dateA - dateB;
-                        });
+                    return this.appointments.filter(appt => appt.clinic_id === clinicId).sort((a, b) => {
+                        const dateA = new Date(a.appointment_date + ' ' + a.appointment_time);
+                        const dateB = new Date(b.appointment_date + ' ' + b.appointment_time);
+                        return dateA - dateB;
+                    });
                 },
                 formatAppointmentDateTime(date, time) {
                     try {
@@ -341,8 +397,8 @@
                     this.newClinic = {
                         hospital_name: clinic.hospital_name,
                         department: clinic.department,
-                        diagnosis: clinic.diagnosis,
-                        medication: clinic.medication
+                        diagnosis: clinic.diagnosis || '',
+                        medication: clinic.medication || ''
                     };
                     this.showAddClinicDialog = true;
                 },
@@ -428,6 +484,14 @@
                             }
                         });
                         if (response.ok) {
+                            if (this.db) {
+                                try {
+                                    const doc = await this.db.get(`clinic_${id}`);
+                                    await this.db.remove(doc);
+                                } catch (e) {
+                                    console.log('Local delete error:', e);
+                                }
+                            }
                             await this.loadClinics();
                             await this.loadAppointments();
                         } else {
@@ -489,6 +553,14 @@
                             }
                         });
                         if (response.ok) {
+                            if (this.db) {
+                                try {
+                                    const doc = await this.db.get(`appointment_${id}`);
+                                    await this.db.remove(doc);
+                                } catch (e) {
+                                    console.log('Local delete error:', e);
+                                }
+                            }
                             await this.loadAppointments();
                         } else {
                             throw new Error('Failed to delete appointment');
@@ -517,16 +589,13 @@
                     if ('Notification' in window && Notification.permission === 'granted') {
                         const now = new Date();
                         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                        
                         this.appointments.forEach(appt => {
                             try {
                                 const apptDate = new Date(appt.appointment_date);
                                 const apptDay = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate());
                                 const diffDays = Math.ceil((apptDay - today) / (1000 * 60 * 60 * 24));
-                                
                                 const notificationKey = `notif_${appt.id}_${diffDays}`;
                                 const hasNotified = localStorage.getItem(notificationKey);
-                                
                                 if (!hasNotified && (diffDays === 7 || diffDays === 5 || diffDays === 3 || diffDays === 1)) {
                                     const clinic = this.clinics.find(c => c.id === appt.clinic_id);
                                     if (clinic) {
@@ -536,9 +605,7 @@
                                         else if (diffDays === 5) body = this.translations[this.currentLang].notification5Days;
                                         else if (diffDays === 3) body = this.translations[this.currentLang].notification3Days;
                                         else if (diffDays === 1) body = this.translations[this.currentLang].notification1Day;
-                                        
                                         body += `\n${clinic.hospital_name} - ${appt.appointment_date} ${appt.appointment_time}`;
-                                        
                                         new Notification(title, { body: body, icon: '/icon.png' });
                                         localStorage.setItem(notificationKey, 'true');
                                     }
@@ -552,6 +619,9 @@
                 logout() {
                     if (this.notificationCheckInterval) {
                         clearInterval(this.notificationCheckInterval);
+                    }
+                    if (this.syncInterval) {
+                        clearInterval(this.syncInterval);
                     }
                     localStorage.removeItem('authToken');
                     localStorage.removeItem('userId');
