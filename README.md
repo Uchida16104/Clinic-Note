@@ -1,3 +1,5 @@
+<img src="./Clinic_Note.png" />
+
 # Clinic Note - Medical Appointment Management System
 
 ## Overview
