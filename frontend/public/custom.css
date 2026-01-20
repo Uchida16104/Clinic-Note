@@ -232,8 +232,8 @@ sl-badge {
     left: 50%;
     transform: translateX(-50%);
     padding: 0.5rem 1rem;
-    background: #1e293b;
-    color: white;
+    background: white;
+    color: black;
     border-radius: 0.5rem;
     font-size: 0.875rem;
     white-space: nowrap;
@@ -265,9 +265,9 @@ sl-badge {
 /* Dark Mode Support */
 @media (prefers-color-scheme: dark) {
     :root {
-        --sl-color-neutral-0: #1e293b;
-        --sl-color-neutral-50: #334155;
-        --sl-color-neutral-100: #475569;
+        --sl-color-neutral-0: white;
+        --sl-color-neutral-50: #99A0AA;
+        --sl-color-neutral-100: #A3AAB4;
     }
 }
 
