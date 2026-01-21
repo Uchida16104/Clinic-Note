@@ -15,7 +15,6 @@
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen flex items-center justify-center">
     <div x-data="registerData()" x-init="init()" class="w-full max-w-md px-4">
-        <!-- Language Switcher -->
         <div class="flex justify-end mb-4" data-aos="fade-down">
             <sl-button-group label="Language">
                 <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
@@ -27,7 +26,6 @@
             </sl-button-group>
         </div>
 
-        <!-- Register Card -->
         <div class="bg-white rounded-2xl shadow-2xl p-8" data-aos="zoom-in">
             <div class="text-center mb-8">
                 <span class="iconify text-6xl text-green-600 mb-4" data-icon="mdi:account-plus"></span>
@@ -48,13 +46,7 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].username"></label>
-                    <sl-input 
-                        x-model="credentials.username" 
-                        type="text" 
-                        :placeholder="translations[currentLang].usernamePlaceholder"
-                        required
-                        minlength="3"
-                        size="large">
+                    <sl-input x-model="credentials.username" type="text" :placeholder="translations[currentLang].usernamePlaceholder" required minlength="3" size="large">
                         <span slot="prefix" class="iconify" data-icon="mdi:account"></span>
                     </sl-input>
                     <small class="text-gray-500" x-text="translations[currentLang].usernameHint"></small>
@@ -62,14 +54,7 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].password"></label>
-                    <sl-input 
-                        x-model="credentials.password" 
-                        type="password" 
-                        :placeholder="translations[currentLang].passwordPlaceholder"
-                        required
-                        minlength="8"
-                        size="large"
-                        password-toggle>
+                    <sl-input x-model="credentials.password" type="password" :placeholder="translations[currentLang].passwordPlaceholder" required minlength="8" size="large" password-toggle>
                         <span slot="prefix" class="iconify" data-icon="mdi:lock"></span>
                     </sl-input>
                     <small class="text-gray-500" x-text="translations[currentLang].passwordHint"></small>
@@ -77,14 +62,7 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].confirmPassword"></label>
-                    <sl-input 
-                        x-model="credentials.confirmPassword" 
-                        type="password" 
-                        :placeholder="translations[currentLang].confirmPasswordPlaceholder"
-                        required
-                        minlength="8"
-                        size="large"
-                        password-toggle>
+                    <sl-input x-model="credentials.confirmPassword" type="password" :placeholder="translations[currentLang].confirmPasswordPlaceholder" required minlength="8" size="large" password-toggle>
                         <span slot="prefix" class="iconify" data-icon="mdi:lock-check"></span>
                     </sl-input>
                 </div>
@@ -153,6 +131,9 @@
                 init() {
                     const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
                     this.currentLang = savedLang;
+                    if (!localStorage.getItem('basicAuthToken')) {
+                        localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
+                    }
                     AOS.init({ duration: 1000, once: true });
                 },
                 switchLanguage(lang) {
@@ -178,7 +159,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Basic ${basicAuthToken}`
+                                'X-Basic-Auth': basicAuthToken
                             },
                             body: JSON.stringify({
                                 username: this.credentials.username,
