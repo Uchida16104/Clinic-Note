@@ -179,6 +179,25 @@
         </div>
 
         <div x-show="selectedHospital && selectedDepartment && allMemosList.length > 0" class="bg-white rounded-2xl shadow-xl p-4 sm:p-6" data-aos="fade-up" data-aos-delay="600">
+            <div class="flex flex-wrap gap-2 mb-4">
+                <sl-button size="small" @click="printAllMemosList()">印刷</sl-button>
+                <sl-button size="small" @click="exportAllMemosListAsJSON()">JSON出力</sl-button>
+                <sl-button size="small" @click="exportMemosAsCSV()">CSV出力</sl-button>
+                <label>
+                    <sl-button size="small">JSON取込</sl-button>
+                    <input type="file"
+                        accept=".json"
+                        hidden
+                        @change="importMemosFromJSON($event.target.files[0])">
+                </label>
+                <label>
+                    <sl-button size="small">CSV取込</sl-button>
+                    <input type="file"
+                        accept=".csv"
+                        hidden
+                        @change="importMemosFromCSV($event.target.files[0])">
+                </label>
+            </div>
             <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
                 <span class="iconify text-indigo-600 mr-2" data-icon="mdi:notebook"></span>
                 <span x-text="translations[currentLang].allMemos"></span>
@@ -729,7 +748,102 @@
                         return `${diffDays}日前`;
                     }
                     return `${diffDays} days ago`;
-                }
+                },
+                getAllLocalMemosObject() {
+                    try {
+                        return this.loadLocalMemos() || {};
+                    } catch {
+                        return {};
+                    }
+                },
+                getAllLocalMemosArray() {
+                    const obj = this.getAllLocalMemosObject();
+                    return Object.entries(obj).map(([date, content]) => ({
+                        date,
+                        content
+                    })).sort((a, b) => new Date(a.date) - new Date(b.date));
+                },
+                printCalendarMemos() {
+                    const memos = this.getAllLocalMemosArray();
+                    const win = window.open('', '_blank');
+                    win.document.write('<h1>Calendar Memos</h1>');
+                    memos.forEach(m => {
+                        win.document.write(`<p><strong>${m.date}</strong><br>${m.content.replace(/\n/g,'<br>')}</p><hr>`);
+                    });
+                    win.document.close();
+                    win.print();
+                },
+                printAllMemosList() {
+                    const memos = this.allMemosList || [];
+                    const win = window.open('', '_blank');
+                    win.document.write('<h1>All Memos</h1>');
+                    memos.forEach(m => {
+                        win.document.write(`<p><strong>${m.date}</strong><br>${m.content.replace(/\n/g,'<br>')}</p><hr>`);
+                    });
+                    win.document.close();
+                    win.print();
+                },
+                exportMemosAsJSON() {
+                    const data = this.getAllLocalMemosObject();
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'calendar-memos.json';
+                    a.click();
+                },
+                exportAllMemosListAsJSON() {
+                    const blob = new Blob([JSON.stringify(this.allMemosList, null, 2)], { type: 'application/json' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'all-memos.json';
+                    a.click();
+                },
+                importMemosFromJSON(file) {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        try {
+                            const data = JSON.parse(reader.result);
+                            if (typeof data !== 'object') return;
+                            const local = this.getAllLocalMemosObject();
+                            Object.assign(local, data);
+                            this.saveLocalMemos(local);
+                            this.updateAllMemosList();
+                            this.generateCalendar();
+                        } catch {}
+                    };
+                    reader.readAsText(file);
+                },
+                exportMemosAsCSV() {
+                    const rows = this.getAllLocalMemosArray();
+                    let csv = 'date,content\n';
+                    rows.forEach(r => {
+                        csv += `"${r.date}","${r.content.replace(/"/g,'""')}"\n`;
+                    });
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'calendar-memos.csv';
+                    a.click();
+                },
+                importMemosFromCSV(file) {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const lines = reader.result.split('\n').slice(1);
+                        const local = this.getAllLocalMemosObject();
+                        lines.forEach(line => {
+                            const [date, content] = line.split(/,(.+)/);
+                            if (date && content) {
+                                local[date.replace(/"/g,'')] = content.replace(/^"|"$/g,'');
+                            }
+                        });
+                        this.saveLocalMemos(local);
+                        this.updateAllMemosList();
+                        this.generateCalendar();
+                    };
+                    reader.readAsText(file);
+                },
+
+
             };
         }
         document.addEventListener('alpine:init', () => {
