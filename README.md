@@ -132,12 +132,6 @@ Display Memo History
 END
 ```
 
-### BASIC Authentication
-
-| --- | --- |
-| User | admin |
-| Password | ClinicNote |
-
 ### Analytics Flow
 
 ```
@@ -294,6 +288,12 @@ CREATE TABLE memos (
 ### Datadog (Optional Monitoring)
 - **Datadog API Key**: `your_datadog_api_key`
 - **Datadog Region**: `US1`
+
+### BASIC Authentication
+
+| User | Password |
+| --- | --- |
+| **admin** | **ClinicNote** |
 
 ## Installation Steps
 
