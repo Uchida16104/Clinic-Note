@@ -183,20 +183,6 @@
                 <sl-button size="small" @click="printAllMemosList()">印刷</sl-button>
                 <sl-button size="small" @click="exportAllMemosListAsJSON()">JSON出力</sl-button>
                 <sl-button size="small" @click="exportMemosAsCSV()">CSV出力</sl-button>
-                <label>
-                    <sl-button size="small">JSON取込</sl-button>
-                    <input type="file"
-                        accept=".json"
-                        hidden
-                        @change="importMemosFromJSON($event.target.files[0])">
-                </label>
-                <label>
-                    <sl-button size="small">CSV取込</sl-button>
-                    <input type="file"
-                        accept=".csv"
-                        hidden
-                        @change="importMemosFromCSV($event.target.files[0])">
-                </label>
             </div>
             <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
                 <span class="iconify text-indigo-600 mr-2" data-icon="mdi:notebook"></span>
@@ -798,21 +784,6 @@
                     a.download = 'all-memos.json';
                     a.click();
                 },
-                importMemosFromJSON(file) {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        try {
-                            const data = JSON.parse(reader.result);
-                            if (typeof data !== 'object') return;
-                            const local = this.getAllLocalMemosObject();
-                            Object.assign(local, data);
-                            this.saveLocalMemos(local);
-                            this.updateAllMemosList();
-                            this.generateCalendar();
-                        } catch {}
-                    };
-                    reader.readAsText(file);
-                },
                 exportMemosAsCSV() {
                     const rows = this.getAllLocalMemosArray();
                     let csv = 'date,content\n';
@@ -824,26 +795,7 @@
                     a.href = URL.createObjectURL(blob);
                     a.download = 'calendar-memos.csv';
                     a.click();
-                },
-                importMemosFromCSV(file) {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const lines = reader.result.split('\n').slice(1);
-                        const local = this.getAllLocalMemosObject();
-                        lines.forEach(line => {
-                            const [date, content] = line.split(/,(.+)/);
-                            if (date && content) {
-                                local[date.replace(/"/g,'')] = content.replace(/^"|"$/g,'');
-                            }
-                        });
-                        this.saveLocalMemos(local);
-                        this.updateAllMemosList();
-                        this.generateCalendar();
-                    };
-                    reader.readAsText(file);
-                },
-
-
+                }
             };
         }
         document.addEventListener('alpine:init', () => {
