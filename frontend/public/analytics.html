@@ -244,6 +244,18 @@
                 },
                 createCharts() {
                     if (!this.chartData || !this.chartData.departments) return;
+                    
+                    // チャートを破棄してから再作成
+                    if (this.charts.department) {
+                        this.charts.department.destroy();
+                    }
+                    if (this.charts.frequency) {
+                        this.charts.frequency.destroy();
+                    }
+                    if (this.charts.pie) {
+                        this.charts.pie.destroy();
+                    }
+                    
                     const ctx1 = document.getElementById('departmentChart');
                     if (ctx1) {
                         this.charts.department = new Chart(ctx1, {
@@ -270,6 +282,7 @@
                             }
                         });
                     }
+                    
                     const ctx2 = document.getElementById('frequencyChart');
                     if (ctx2) {
                         this.charts.frequency = new Chart(ctx2, {
@@ -297,6 +310,7 @@
                             }
                         });
                     }
+                    
                     const ctx3 = document.getElementById('pieChart');
                     if (ctx3) {
                         this.charts.pie = new Chart(ctx3, {
