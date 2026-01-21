@@ -132,6 +132,12 @@ Display Memo History
 END
 ```
 
+### BASIC Authentication
+
+| --- | --- |
+| User | admin |
+| Password | ClinicNote |
+
 ### Analytics Flow
 
 ```
