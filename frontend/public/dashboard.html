@@ -192,12 +192,7 @@
                         appointmentDate: '通院日',
                         appointmentTime: '時間',
                         addAppointmentBtn: '通院日を追加',
-                        upcomingAppointments: '予定されている通院日',
-                        notificationTitle: '通院日のお知らせ',
-                        notification1Week: '1週間前のお知らせ',
-                        notification5Days: '5日前のお知らせ',
-                        notification3Days: '3日前のお知らせ',
-                        notification1Day: '1日前のお知らせ'
+                        upcomingAppointments: '予定されている通院日'
                     },
                     en: {
                         title: 'Dashboard',
@@ -222,12 +217,7 @@
                         appointmentDate: 'Date',
                         appointmentTime: 'Time',
                         addAppointmentBtn: 'Add Appointment',
-                        upcomingAppointments: 'Upcoming Appointments',
-                        notificationTitle: 'Appointment Reminder',
-                        notification1Week: '1 Week Reminder',
-                        notification5Days: '5 Days Reminder',
-                        notification3Days: '3 Days Reminder',
-                        notification1Day: '1 Day Reminder'
+                        upcomingAppointments: 'Upcoming Appointments'
                     }
                 },
                 async init() {
@@ -238,6 +228,9 @@
                         if (!authToken) {
                             window.location.href = '/login.html';
                             return;
+                        }
+                        if (!localStorage.getItem('basicAuthToken')) {
+                            localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
                         }
                         await this.initPouchDB();
                         AOS.init({ duration: 1000, once: true });
@@ -254,36 +247,8 @@
                     try {
                         const userId = localStorage.getItem('userId') || 'user';
                         this.db = new PouchDB(`clinic-note-${userId}`);
-                        const remoteDB = new PouchDB('https://clinic-note-api.onrender.com/db/' + userId, {
-                            skip_setup: true
-                        });
-                        this.db.sync(remoteDB, {
-                            live: true,
-                            retry: true
-                        }).on('change', (info) => {
-                            console.log('Sync change:', info);
-                            this.loadFromLocal();
-                        }).on('error', (err) => {
-                            console.log('Sync error:', err);
-                        });
                     } catch (err) {
                         console.error('PouchDB init error:', err);
-                    }
-                },
-                async loadFromLocal() {
-                    try {
-                        if (!this.db) return;
-                        const allDocs = await this.db.allDocs({ include_docs: true });
-                        const clinicDocs = allDocs.rows.filter(r => r.id.startsWith('clinic_')).map(r => r.doc);
-                        const apptDocs = allDocs.rows.filter(r => r.id.startsWith('appointment_')).map(r => r.doc);
-                        if (clinicDocs.length > 0) {
-                            this.clinics = clinicDocs;
-                        }
-                        if (apptDocs.length > 0) {
-                            this.appointments = apptDocs;
-                        }
-                    } catch (err) {
-                        console.error('Load from local error:', err);
                     }
                 },
                 startAutoSync() {
@@ -308,31 +273,10 @@
                             }
                         });
                         if (response.ok) {
-                            const data = await response.json();
-                            this.clinics = data;
-                            if (this.db) {
-                                for (const clinic of data) {
-                                    try {
-                                        const docId = `clinic_${clinic.id}`;
-                                        const doc = { ...clinic, _id: docId };
-                                        await this.db.put(doc).catch(async (e) => {
-                                            if (e.status === 409) {
-                                                const old = await this.db.get(docId);
-                                                doc._rev = old._rev;
-                                                await this.db.put(doc);
-                                            }
-                                        });
-                                    } catch (err) {
-                                        console.error('Save clinic to local error:', err);
-                                    }
-                                }
-                            }
-                        } else {
-                            throw new Error('Failed to load clinics');
+                            this.clinics = await response.json();
                         }
                     } catch (err) {
                         console.error('Load clinics error:', err);
-                        await this.loadFromLocal();
                     }
                 },
                 async loadAppointments() {
@@ -347,31 +291,10 @@
                             }
                         });
                         if (response.ok) {
-                            const data = await response.json();
-                            this.appointments = data;
-                            if (this.db) {
-                                for (const appt of data) {
-                                    try {
-                                        const docId = `appointment_${appt.id}`;
-                                        const doc = { ...appt, _id: docId };
-                                        await this.db.put(doc).catch(async (e) => {
-                                            if (e.status === 409) {
-                                                const old = await this.db.get(docId);
-                                                doc._rev = old._rev;
-                                                await this.db.put(doc);
-                                            }
-                                        });
-                                    } catch (err) {
-                                        console.error('Save appointment to local error:', err);
-                                    }
-                                }
-                            }
-                        } else {
-                            throw new Error('Failed to load appointments');
+                            this.appointments = await response.json();
                         }
                     } catch (err) {
                         console.error('Load appointments error:', err);
-                        await this.loadFromLocal();
                     }
                 },
                 getClinicAppointments(clinicId) {
@@ -387,9 +310,9 @@
                         const year = d.getFullYear();
                         const month = String(d.getMonth() + 1).padStart(2, '0');
                         const day = String(d.getDate()).padStart(2, '0');
-                        return `${year}/${month}/${day} ${time}`;
+                        return `${year}/${month}/${day} ${time || ''}`;
                     } catch (error) {
-                        return `${date} ${time}`;
+                        return `${date} ${time || ''}`;
                     }
                 },
                 editClinic(clinic) {
@@ -432,8 +355,6 @@
                         if (response.ok) {
                             await this.loadClinics();
                             this.closeClinicDialog();
-                        } else {
-                            throw new Error('Failed to add clinic');
                         }
                     } catch (err) {
                         console.error('Add clinic error:', err);
@@ -460,46 +381,30 @@
                         if (response.ok) {
                             await this.loadClinics();
                             this.closeClinicDialog();
-                        } else {
-                            throw new Error('Failed to update clinic');
                         }
                     } catch (err) {
                         console.error('Update clinic error:', err);
-                        alert(this.currentLang === 'ja' ? '病院の更新に失敗しました' : 'Failed to update clinic');
                     } finally {
                         this.loading = false;
                     }
                 },
                 async deleteClinic(id) {
-                    if (!confirm(this.currentLang === 'ja' ? '本当に削除しますか?' : 'Are you sure to delete?')) return;
+                    if (!confirm(this.currentLang === 'ja' ? '本当に削除しますか?' : 'Are you sure?')) return;
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        const response = await fetch(`${API_URL}/api/clinics/${id}`, {
+                        await fetch(`${API_URL}/api/clinics/${id}`, {
                             method: 'DELETE',
                             headers: {
                                 'Authorization': `Bearer ${authToken}`,
                                 'X-Basic-Auth': basicAuthToken
                             }
                         });
-                        if (response.ok) {
-                            if (this.db) {
-                                try {
-                                    const doc = await this.db.get(`clinic_${id}`);
-                                    await this.db.remove(doc);
-                                } catch (e) {
-                                    console.log('Local delete error:', e);
-                                }
-                            }
-                            await this.loadClinics();
-                            await this.loadAppointments();
-                        } else {
-                            throw new Error('Failed to delete clinic');
-                        }
+                        await this.loadClinics();
+                        await this.loadAppointments();
                     } catch (err) {
                         console.error('Delete clinic error:', err);
-                        alert(this.currentLang === 'ja' ? '削除に失敗しました' : 'Failed to delete');
                     }
                 },
                 selectClinicForAppointment(clinic) {
@@ -512,7 +417,7 @@
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        const response = await fetch(`${API_URL}/api/appointments`, {
+                        await fetch(`${API_URL}/api/appointments`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -525,58 +430,36 @@
                                 appointment_time: this.newAppointment.time
                             })
                         });
-                        if (response.ok) {
-                            await this.loadAppointments();
-                            this.showAppointmentDialog = false;
-                            this.newAppointment = { date: '', time: '' };
-                        } else {
-                            throw new Error('Failed to add appointment');
-                        }
+                        await this.loadAppointments();
+                        this.showAppointmentDialog = false;
+                        this.newAppointment = { date: '', time: '' };
                     } catch (err) {
                         console.error('Add appointment error:', err);
-                        alert(this.currentLang === 'ja' ? '通院日の追加に失敗しました' : 'Failed to add appointment');
                     } finally {
                         this.loading = false;
                     }
                 },
                 async deleteAppointment(id) {
-                    if (!confirm(this.currentLang === 'ja' ? '通院日を削除しますか?' : 'Delete this appointment?')) return;
+                    if (!confirm(this.currentLang === 'ja' ? '削除しますか?' : 'Delete?')) return;
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        const response = await fetch(`${API_URL}/api/appointments/${id}`, {
+                        await fetch(`${API_URL}/api/appointments/${id}`, {
                             method: 'DELETE',
                             headers: {
                                 'Authorization': `Bearer ${authToken}`,
                                 'X-Basic-Auth': basicAuthToken
                             }
                         });
-                        if (response.ok) {
-                            if (this.db) {
-                                try {
-                                    const doc = await this.db.get(`appointment_${id}`);
-                                    await this.db.remove(doc);
-                                } catch (e) {
-                                    console.log('Local delete error:', e);
-                                }
-                            }
-                            await this.loadAppointments();
-                        } else {
-                            throw new Error('Failed to delete appointment');
-                        }
+                        await this.loadAppointments();
                     } catch (err) {
                         console.error('Delete appointment error:', err);
-                        alert(this.currentLang === 'ja' ? '削除に失敗しました' : 'Failed to delete');
                     }
                 },
                 async requestNotificationPermission() {
                     if ('Notification' in window && Notification.permission === 'default') {
-                        try {
-                            await Notification.requestPermission();
-                        } catch (error) {
-                            console.error('Notification permission error:', error);
-                        }
+                        await Notification.requestPermission();
                     }
                 },
                 startNotificationCheck() {
@@ -590,39 +473,25 @@
                         const now = new Date();
                         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                         this.appointments.forEach(appt => {
-                            try {
-                                const apptDate = new Date(appt.appointment_date);
-                                const apptDay = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate());
-                                const diffDays = Math.ceil((apptDay - today) / (1000 * 60 * 60 * 24));
-                                const notificationKey = `notif_${appt.id}_${diffDays}`;
-                                const hasNotified = localStorage.getItem(notificationKey);
-                                if (!hasNotified && (diffDays === 7 || diffDays === 5 || diffDays === 3 || diffDays === 1)) {
-                                    const clinic = this.clinics.find(c => c.id === appt.clinic_id);
-                                    if (clinic) {
-                                        const title = this.translations[this.currentLang].notificationTitle;
-                                        let body = '';
-                                        if (diffDays === 7) body = this.translations[this.currentLang].notification1Week;
-                                        else if (diffDays === 5) body = this.translations[this.currentLang].notification5Days;
-                                        else if (diffDays === 3) body = this.translations[this.currentLang].notification3Days;
-                                        else if (diffDays === 1) body = this.translations[this.currentLang].notification1Day;
-                                        body += `\n${clinic.hospital_name} - ${appt.appointment_date} ${appt.appointment_time}`;
-                                        new Notification(title, { body: body, icon: '/icon.png' });
-                                        localStorage.setItem(notificationKey, 'true');
-                                    }
+                            const apptDate = new Date(appt.appointment_date);
+                            const apptDay = new Date(apptDate.getFullYear(), apptDate.getMonth(), apptDate.getDate());
+                            const diffDays = Math.ceil((apptDay - today) / (1000 * 60 * 60 * 24));
+                            const notificationKey = `notif_${appt.id}_${diffDays}`;
+                            if (!localStorage.getItem(notificationKey) && (diffDays === 7 || diffDays === 3 || diffDays === 1)) {
+                                const clinic = this.clinics.find(c => c.id === appt.clinic_id);
+                                if (clinic) {
+                                    new Notification('通院日のお知らせ', { 
+                                        body: `${clinic.hospital_name} - ${appt.appointment_date} ${appt.appointment_time || ''}`
+                                    });
+                                    localStorage.setItem(notificationKey, 'true');
                                 }
-                            } catch (error) {
-                                console.error('Notification check error:', error);
                             }
                         });
                     }
                 },
                 logout() {
-                    if (this.notificationCheckInterval) {
-                        clearInterval(this.notificationCheckInterval);
-                    }
-                    if (this.syncInterval) {
-                        clearInterval(this.syncInterval);
-                    }
+                    if (this.notificationCheckInterval) clearInterval(this.notificationCheckInterval);
+                    if (this.syncInterval) clearInterval(this.syncInterval);
                     localStorage.removeItem('authToken');
                     localStorage.removeItem('userId');
                     window.location.href = '/login.html';
