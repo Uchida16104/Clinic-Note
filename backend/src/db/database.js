@@ -71,7 +71,7 @@ async function initDatabase() {
         `);
         console.log('✓ Appointments table created/verified');
 
-        // Create memos table
+        // Create memos table (個人の症状メモ)
         await client.query(`
             CREATE TABLE IF NOT EXISTS memos (
                 id SERIAL PRIMARY KEY,
@@ -85,6 +85,23 @@ async function initDatabase() {
             )
         `);
         console.log('✓ Memos table created/verified');
+
+        // Create doctor_memos table (医師の診察結果メモ)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS doctor_memos (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
+                memo_date DATE NOT NULL,
+                doctor_notes TEXT,
+                diagnosis_notes TEXT,
+                prescription_notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, clinic_id, memo_date)
+            )
+        `);
+        console.log('✓ Doctor memos table created/verified');
 
         // Create indexes for better performance
         await client.query(`
@@ -108,6 +125,15 @@ async function initDatabase() {
         await client.query(`
             CREATE INDEX IF NOT EXISTS idx_memos_date ON memos(memo_date)
         `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_doctor_memos_user_id ON doctor_memos(user_id)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_doctor_memos_clinic_id ON doctor_memos(clinic_id)
+        `);
+        await client.query(`
+            CREATE INDEX IF NOT EXISTS idx_doctor_memos_date ON doctor_memos(memo_date)
+        `);
         console.log('✓ Indexes created/verified');
 
         // Create updated_at trigger function
@@ -122,7 +148,7 @@ async function initDatabase() {
         `);
 
         // Create triggers for updated_at
-        const tables = ['users', 'clinics', 'appointments', 'memos'];
+        const tables = ['users', 'clinics', 'appointments', 'memos', 'doctor_memos'];
         for (const table of tables) {
             await client.query(`
                 DROP TRIGGER IF EXISTS update_${table}_updated_at ON ${table}
