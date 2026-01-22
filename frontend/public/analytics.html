@@ -20,11 +20,15 @@
             h2 { font-size: 1.25rem; }
             canvas { max-height: 250px; }
         }
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="analyticsData()" x-init="init()" class="container mx-auto px-4 py-8">
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4" data-aos="fade-down">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 no-print" data-aos="fade-down">
             <div>
                 <h1 class="text-3xl sm:text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
                 <p class="text-gray-600 mt-2 text-sm sm:text-base" x-text="translations[currentLang].subtitle"></p>
@@ -49,7 +53,7 @@
             <p class="mt-4 text-gray-600" x-text="translations[currentLang].loading"></p>
         </div>
 
-        <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8" data-aos="fade-up">
+        <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-4 gap-4 sm:gap-6 mb-8" data-aos="fade-up">
             <sl-card>
                 <div class="text-center p-4">
                     <span class="iconify text-4xl sm:text-5xl text-blue-500 mb-3" data-icon="mdi:hospital-building"></span>
@@ -71,6 +75,25 @@
                     <div class="text-sm sm:text-base text-gray-600 mt-2" x-text="translations[currentLang].totalMemos"></div>
                 </div>
             </sl-card>
+            <sl-card>
+                <div class="text-center p-4">
+                    <span class="iconify text-4xl sm:text-5xl text-red-500 mb-3" data-icon="mdi:doctor"></span>
+                    <div class="text-2xl sm:text-3xl font-bold text-gray-800" x-text="stats.totalDoctorMemos"></div>
+                    <div class="text-sm sm:text-base text-gray-600 mt-2">医師メモ数</div>
+                </div>
+            </sl-card>
+        </div>
+
+        <div x-show="!loading" class="mb-4 flex gap-2 no-print">
+            <sl-button size="small" @click="printAnalytics()">
+                <span class="iconify" data-icon="mdi:printer"></span> 印刷
+            </sl-button>
+            <sl-button size="small" @click="exportJSON()">
+                <span class="iconify" data-icon="mdi:code-json"></span> JSON
+            </sl-button>
+            <sl-button size="small" @click="exportCSV()">
+                <span class="iconify" data-icon="mdi:file-delimited"></span> CSV
+            </sl-button>
         </div>
 
         <div x-show="!loading" class="space-y-8">
@@ -115,14 +138,46 @@
                             <div class="p-4">
                                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2 gap-2">
                                     <h3 class="text-base sm:text-lg font-bold" x-text="trend.department"></h3>
-                                    <sl-badge :variant="trend.trend === 'increasing' ? 'danger' : trend.trend === 'stable' ? 'primary' : 'success'">
-                                        <span x-text="translations[currentLang][trend.trend]"></span>
-                                    </sl-badge>
+                                    <div class="flex gap-2">
+                                        <sl-badge :variant="trend.trend === 'increasing' ? 'danger' : trend.trend === 'stable' ? 'primary' : 'success'">
+                                            <span x-text="translations[currentLang][trend.trend]"></span>
+                                        </sl-badge>
+                                        <sl-badge variant="neutral" x-show="trend.doctorMemosCount > 0">
+                                            医師メモ: <span x-text="trend.doctorMemosCount"></span>
+                                        </sl-badge>
+                                    </div>
                                 </div>
                                 <div class="text-sm sm:text-base text-gray-600">
                                     <p><strong x-text="translations[currentLang].visitCount"></strong>: <span x-text="trend.count"></span></p>
                                     <p><strong x-text="translations[currentLang].avgInterval"></strong>: <span x-text="trend.avgInterval"></span> <span x-text="translations[currentLang].days"></span></p>
                                     <p class="mt-2" x-text="trend.analysis"></p>
+                                </div>
+                            </div>
+                        </sl-card>
+                    </template>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6" data-aos="fade-up" data-aos-delay="1000" x-show="doctorMemos.length > 0">
+                <h2 class="text-xl sm:text-2xl font-bold mb-6 flex items-center">
+                    <span class="iconify text-indigo-600 mr-2" data-icon="mdi:doctor"></span>
+                    医師の診察結果サマリー
+                </h2>
+                <div class="space-y-4">
+                    <template x-for="memo in doctorMemos.slice(0, 10)" :key="memo.id">
+                        <sl-card>
+                            <div class="p-4">
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <h4 class="font-bold text-gray-800" x-text="memo.hospital_name"></h4>
+                                        <p class="text-sm text-gray-600" x-text="memo.department"></p>
+                                    </div>
+                                    <sl-badge variant="primary" x-text="memo.memo_date"></sl-badge>
+                                </div>
+                                <div class="text-sm text-gray-700 space-y-1">
+                                    <p x-show="memo.doctor_notes"><strong>診察:</strong> <span x-text="memo.doctor_notes"></span></p>
+                                    <p x-show="memo.diagnosis_notes"><strong>診断:</strong> <span x-text="memo.diagnosis_notes"></span></p>
+                                    <p x-show="memo.prescription_notes"><strong>処方:</strong> <span x-text="memo.prescription_notes"></span></p>
                                 </div>
                             </div>
                         </sl-card>
@@ -140,11 +195,13 @@
                 stats: {
                     totalClinics: 0,
                     totalAppointments: 0,
-                    totalMemos: 0
+                    totalMemos: 0,
+                    totalDoctorMemos: 0
                 },
                 trends: [],
                 charts: {},
                 chartData: null,
+                doctorMemos: [],
                 syncInterval: null,
                 translations: {
                     ja: {
@@ -229,17 +286,19 @@
                         });
                         if (response.ok) {
                             const data = await response.json();
-                            this.stats = data.stats || { totalClinics: 0, totalAppointments: 0, totalMemos: 0 };
+                            this.stats = data.stats || { totalClinics: 0, totalAppointments: 0, totalMemos: 0, totalDoctorMemos: 0 };
                             this.trends = data.trends || [];
                             this.chartData = data.chartData || { departments: [], departmentCounts: [], months: [], monthlyCounts: [] };
+                            this.doctorMemos = data.doctorMemos || [];
                         } else {
                             throw new Error('Failed to load analytics');
                         }
                     } catch (err) {
                         console.error('Load analytics error:', err);
-                        this.stats = { totalClinics: 0, totalAppointments: 0, totalMemos: 0 };
+                        this.stats = { totalClinics: 0, totalAppointments: 0, totalMemos: 0, totalDoctorMemos: 0 };
                         this.trends = [];
                         this.chartData = { departments: [], departmentCounts: [], months: [], monthlyCounts: [] };
+                        this.doctorMemos = [];
                     }
                 },
                 createCharts() {
@@ -350,6 +409,34 @@
                         }
                         this.charts.pie.update();
                     }
+                },
+                printAnalytics() {
+                    window.print();
+                },
+                async exportJSON() {
+                    const data = {
+                        stats: this.stats,
+                        trends: this.trends,
+                        chartData: this.chartData,
+                        doctorMemos: this.doctorMemos,
+                        exportDate: new Date().toISOString()
+                    };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'analytics_export.json';
+                    a.click();
+                },
+                async exportCSV() {
+                    let csv = 'Department,Visit Count,Avg Interval,Trend\n';
+                    this.trends.forEach(t => {
+                        csv += `"${t.department}","${t.count}","${t.avgInterval}","${t.trend}"\n`;
+                    });
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = 'analytics_export.csv';
+                    a.click();
                 }
             };
         }
