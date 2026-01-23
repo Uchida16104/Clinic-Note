@@ -507,8 +507,66 @@
                     a.click();
                 },
                 async sendEmail() {
-                    alert('メール送信機能は実装準備中です。データをエクスポートしてメールに添付してください。');
-                    this.showEmailDialog = false;
+                    try {
+                        if (!this.emailAddress) {
+                            alert('送信先メールアドレスを入力してください。');
+                            return;
+                        }
+                        if (!this.selectedHospital || !this.selectedDepartment) {
+                            alert('病院と診療科目を選択してください。');
+                            return;
+                        }
+                        const subject = `[Clinic Note] ${this.selectedHospital} - ${this.selectedDepartment}`;
+                        let body = '';
+                        body += `病院: ${this.selectedHospital}\n`;
+                        body += `診療科: ${this.selectedDepartment}\n`;
+                        body += `月: ${this.currentMonthYear}\n\n`;
+                        if (this.emailDataType === 'calendar' || this.emailDataType === 'all') {
+                            body += '【通院予定】\n';
+                            if (this.appointments.length === 0) {
+                                body += 'なし\n';
+                            } else {
+                                this.appointments.forEach(a => {
+                                    body += `- ${a.appointment_date}\n`;
+                                });
+                            }
+                            body += '\n';
+                        }
+                        if (this.emailDataType === 'memos' || this.emailDataType === 'all') {
+                            body += '【個人メモ】\n';
+                            if (this.memos.length === 0) {
+                                body += 'なし\n';
+                            } else {
+                                this.memos.forEach(m => {
+                                    body += `- ${m.memo_date}: ${m.content}\n`;
+                                });
+                            }
+                            body += '\n';
+                        }
+                        if (this.emailDataType === 'doctor_memos' || this.emailDataType === 'all') {
+                            body += '【医師メモ】\n';
+                            if (this.doctorMemos.length === 0) {
+                                body += 'なし\n';
+                            } else {
+                                this.doctorMemos.forEach(dm => {
+                                    body += `- ${dm.memo_date}\n`;
+                                    if (dm.doctor_notes) body += `  医師所見: ${dm.doctor_notes}\n`;
+                                    if (dm.diagnosis_notes) body += `  診断: ${dm.diagnosis_notes}\n`;
+                                    if (dm.prescription_notes) body += `  処方: ${dm.prescription_notes}\n`;
+                                });
+                            }
+                            body += '\n';
+                        }
+                        const mailtoUrl =
+                            `mailto:${encodeURIComponent(this.emailAddress)}` +
+                            `?subject=${encodeURIComponent(subject)}` +
+                            `&body=${encodeURIComponent(body)}`;
+                        window.location.href = mailtoUrl;
+                        this.showEmailDialog = false;
+                    } catch (err) {
+                        console.error('Send email error:', err);
+                        alert('メール送信処理中にエラーが発生しました。');
+                    }
                 }
             };
         }
