@@ -1,4 +1,4 @@
-// Clinic Note - Analytics Routes
+// Clinic Note - Analytics Routes (完全版)
 const express = require('express');
 const router = express.Router();
 const { query } = require('../db/database');
