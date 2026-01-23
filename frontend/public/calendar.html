@@ -82,25 +82,6 @@
                 <template x-for="day in daysOfWeek" :key="day">
                     <div class="text-center font-bold text-gray-700 py-1 sm:py-2 text-xs sm:text-base" x-text="day"></div>
                 </template>
-                <template x-for="date in calendarDates" :key="date.key">
-                    <div @click="selectDate(date)" class="aspect-square p-1 sm:p-2 border rounded-lg cursor-pointer transition-all hover:shadow-md" :class="{
-                            'bg-gray-100 text-gray-400': !date.isCurrentMonth,
-                            'bg-blue-500 text-white font-bold': date.isToday,
-                            'bg-green-100 border-green-500': date.hasAppointment,
-                            'bg-yellow-100 border-yellow-500': date.hasMemo && !date.hasAppointment,
-                            'hover:bg-indigo-50': date.isCurrentMonth
-                        }">
-                        <div class="text-center">
-                            <div class="text-xs sm:text-sm font-semibold" x-text="date.day"></div>
-                            <template x-if="date.hasAppointment">
-                                <span class="iconify text-xs" data-icon="mdi:calendar-check"></span>
-                            </template>
-                            <template x-if="date.hasMemo">
-                                <span class="iconify text-xs" data-icon="mdi:note-text"></span>
-                            </template>
-                        </div>
-                    </div>
-                </template>
             </div>
 
             <div class="mt-4 flex gap-2 no-print">
