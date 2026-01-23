@@ -1,242 +1,507 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clinic Note - カレンダー</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-<script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
-<script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
-<script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
-<link rel="stylesheet" href="/custom.css">
-<style>
-@media print {.no-print{display:none}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Note - カレンダー</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@motionone/dom@10.16.4/dist/motion.min.js"></script>
+    <link rel="stylesheet" href="/custom.css">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white; }
+        }
+        .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
 </head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div x-data="calendarData()" x-init="init()" class="container mx-auto px-4 py-8">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 no-print" data-aos="fade-down">
+            <div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
+                <p class="text-gray-600 mt-2 text-sm sm:text-base" x-text="translations[currentLang].subtitle"></p>
+            </div>
+            <div class="flex gap-2">
+                <sl-button-group label="Language">
+                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'" size="small">
+                        <span class="iconify" data-icon="twemoji:flag-japan"></span>
+                    </sl-button>
+                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'" size="small">
+                        <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                    </sl-button>
+                </sl-button-group>
+                <sl-button variant="default" @click="window.location.href='/dashboard.html'" size="small">
+                    <span class="iconify" data-icon="mdi:arrow-left"></span>
+                </sl-button>
+            </div>
+        </div>
 
-<body class="bg-gray-100">
-<div x-data="calendarData()" x-init="init()" class="container mx-auto p-4">
+        <div class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-8 no-print" data-aos="fade-up">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4" x-text="translations[currentLang].selectClinic"></h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <sl-select :placeholder="translations[currentLang].hospitalPlaceholder" size="large" @sl-change="selectedHospital = $event.target.value; onHospitalChange();">
+                    <template x-for="hospital in hospitals" :key="hospital">
+                        <sl-option :value="hospital" x-text="hospital"></sl-option>
+                    </template>
+                </sl-select>
+                <sl-select :placeholder="translations[currentLang].departmentPlaceholder" size="large" :disabled="!selectedHospital" @sl-change="selectedDepartment = $event.target.value; onDepartmentChange();">
+                    <template x-for="dept in departments" :key="dept">
+                        <sl-option :value="dept" x-text="dept"></sl-option>
+                    </template>
+                </sl-select>
+            </div>
+        </div>
 
-<h1 class="text-2xl font-bold mb-4">Clinic Note Calendar</h1>
+        <div x-show="selectedHospital && selectedDepartment" class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-8" data-aos="fade-up" data-aos-delay="200">
+            <div class="flex justify-between items-center mb-6 no-print">
+                <sl-button @click="previousMonth()" size="small">
+                    <span class="iconify" data-icon="mdi:chevron-left"></span>
+                </sl-button>
+                <h2 class="text-lg sm:text-2xl font-bold" x-text="currentMonthYear"></h2>
+                <sl-button @click="nextMonth()" size="small">
+                    <span class="iconify" data-icon="mdi:chevron-right"></span>
+                </sl-button>
+            </div>
 
-<!-- セレクタ -->
-<div class="grid grid-cols-2 gap-4 mb-4 no-print">
-<sl-select x-model="selectedHospital" placeholder="Hospital" @sl-change="onHospitalChange()">
-<template x-for="h in hospitals"><sl-option :value="h" x-text="h"></sl-option></template>
-</sl-select>
+            <div class="grid grid-cols-7 gap-1 sm:gap-2">
+                <template x-for="day in daysOfWeek" :key="day">
+                    <div class="text-center font-bold text-gray-700 py-1 sm:py-2 text-xs sm:text-base" x-text="day"></div>
+                </template>
+                <template x-for="date in calendarDates" :key="date.key">
+                    <div @click="selectDate(date)" class="aspect-square p-1 sm:p-2 border rounded-lg cursor-pointer transition-all hover:shadow-md" :class="{
+                            'bg-gray-100 text-gray-400': !date.isCurrentMonth,
+                            'bg-blue-500 text-white font-bold': date.isToday,
+                            'bg-green-100 border-green-500': date.hasAppointment,
+                            'bg-yellow-100 border-yellow-500': date.hasMemo && !date.hasAppointment,
+                            'hover:bg-indigo-50': date.isCurrentMonth
+                        }">
+                        <div class="text-center">
+                            <div class="text-xs sm:text-sm font-semibold" x-text="date.day"></div>
+                            <template x-if="date.hasAppointment">
+                                <span class="iconify text-xs" data-icon="mdi:calendar-check"></span>
+                            </template>
+                            <template x-if="date.hasMemo">
+                                <span class="iconify text-xs" data-icon="mdi:note-text"></span>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
 
-<sl-select x-model="selectedDepartment" placeholder="Department" :disabled="!selectedHospital" @sl-change="onDepartmentChange()">
-<template x-for="d in departments"><sl-option :value="d" x-text="d"></sl-option></template>
-</sl-select>
-</div>
+            <div class="mt-4 flex gap-2 no-print">
+                <sl-button size="small" @click="printCalendar()">
+                    <span class="iconify" data-icon="mdi:printer"></span> 印刷
+                </sl-button>
+                <sl-button size="small" @click="exportCalendarJSON()">
+                    <span class="iconify" data-icon="mdi:code-json"></span> JSON
+                </sl-button>
+                <sl-button size="small" @click="exportCalendarCSV()">
+                    <span class="iconify" data-icon="mdi:file-delimited"></span> CSV
+                </sl-button>
+                <sl-button size="small" @click="showEmailDialog = true">
+                    <span class="iconify" data-icon="mdi:email"></span> メール送信
+                </sl-button>
+            </div>
+        </div>
 
-<!-- カレンダー -->
-<div class="bg-white rounded p-4 shadow">
-<div class="flex justify-between mb-2">
-<button @click="previousMonth()">‹</button>
-<span x-text="currentMonthYear"></span>
-<button @click="nextMonth()">›</button>
-</div>
+        <div x-show="selectedDate" class="bg-white rounded-2xl shadow-xl p-4 sm:p-6 mb-8" data-aos="fade-up" data-aos-delay="400">
+            <h2 class="text-xl sm:text-2xl font-bold mb-4 flex items-center">
+                <span class="iconify text-indigo-600 mr-2" data-icon="mdi:note-edit"></span>
+                <span x-text="translations[currentLang].memo + ' - ' + selectedDateFormatted"></span>
+            </h2>
 
-<div class="grid grid-cols-7 gap-1 text-center">
-<template x-for="d in daysOfWeek"><div class="font-bold" x-text="d"></div></template>
+            <!-- 個人の症状メモ -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-blue-600">個人の症状メモ</h3>
+                <sl-textarea x-model="currentMemo" placeholder="症状や体調について記録してください..." rows="4" resize="auto"></sl-textarea>
+                <div class="mt-2 flex gap-2">
+                    <sl-button size="small" variant="primary" @click="saveMemo()" :loading="loading">保存</sl-button>
+                    <sl-button size="small" variant="default" @click="currentMemo = ''">クリア</sl-button>
+                </div>
+            </div>
 
-<template x-for="date in calendarDates" :key="date.key">
-<div
-@click="date.date && selectDate(date)"
-class="border p-2 h-16"
-:class="{
-'bg-gray-200': !date.isCurrentMonth,
-'bg-blue-500 text-white': date.isToday,
-'cursor-pointer': date.date
-}">
-<div x-text="date.day"></div>
-</div>
-</template>
-</div>
-</div>
+            <!-- 医師の診察結果メモ -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-3 text-green-600">医師の診察結果メモ</h3>
+                <sl-textarea x-model="currentDoctorNotes" placeholder="医師からの診察結果..." rows="3" resize="auto" class="mb-2"></sl-textarea>
+                <sl-textarea x-model="currentDiagnosisNotes" placeholder="診断内容..." rows="2" resize="auto" class="mb-2"></sl-textarea>
+                <sl-textarea x-model="currentPrescriptionNotes" placeholder="処方内容..." rows="2" resize="auto"></sl-textarea>
+                <div class="mt-2 flex gap-2">
+                    <sl-button size="small" variant="success" @click="saveDoctorMemo()" :loading="loading">保存</sl-button>
+                    <sl-button size="small" variant="default" @click="clearDoctorMemo()">クリア</sl-button>
+                </div>
+            </div>
 
-<!-- メモ -->
-<div x-show="selectedDate" class="bg-white mt-4 p-4 rounded shadow">
-<h2 x-text="selectedDateFormatted"></h2>
-<sl-textarea x-model="currentMemo"></sl-textarea>
-<sl-button @click="saveMemo()">保存</sl-button>
-</div>
+            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''" class="mt-4">
+                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                <span x-text="successMessage"></span>
+            </sl-alert>
+        </div>
 
-<!-- ツール -->
-<div class="mt-4 no-print flex gap-2">
-<sl-button @click="exportJSON()">JSON Export</sl-button>
-<sl-button @click="exportCSV()">CSV Export</sl-button>
-<input type="file" @change="importJSON($event)" accept=".json">
-<input type="file" @change="importCSV($event)" accept=".csv">
-<sl-button @click="sendEmail()">Mail</sl-button>
-</div>
-
-</div>
-<script src="/calendar.js">
-<script>
-function calendarData(){
-return{
-API:'https://clinic-note-api.onrender.com',
-
-currentLang:'ja',
-daysOfWeek:['日','月','火','水','木','金','土'],
-currentDate:new Date(),
-calendarDates:[],
-currentMonthYear:'',
-selectedHospital:'',
-selectedDepartment:'',
-hospitals:[],
-departments:[],
-clinics:[],
-appointments:[],
-memos:[],
-doctorMemos:[],
-selectedDate:null,
-selectedDateFormatted:'',
-currentMemo:'',
-
-async init(){
-this.restoreState()
-await this.loadClinics()
-if(this.selectedHospital) this.onHospitalChange()
-if(this.selectedDepartment) await this.onDepartmentChange()
-this.generateCalendar()
-},
-
-saveState(){
-localStorage.setItem('clinicState',JSON.stringify({
-hospital:this.selectedHospital,
-department:this.selectedDepartment,
-date:this.currentDate
-}))
-},
-
-restoreState(){
-const s=JSON.parse(localStorage.getItem('clinicState')||'{}')
-if(s.hospital) this.selectedHospital=s.hospital
-if(s.department) this.selectedDepartment=s.department
-if(s.date) this.currentDate=new Date(s.date)
-},
-
-async loadClinics(){
-const r=await fetch(`${this.API}/api/clinics`,{headers:this.auth()})
-this.clinics=await r.json()
-this.hospitals=[...new Set(this.clinics.map(c=>c.hospital_name))]
-},
-
-onHospitalChange(){
-this.departments=this.clinics.filter(c=>c.hospital_name===this.selectedHospital).map(c=>c.department)
-this.saveState()
-},
-
-async onDepartmentChange(){
-await this.loadAppointments()
-await this.loadMemos()
-this.generateCalendar()
-this.saveState()
-},
-
-async loadAppointments(){
-const c=this.clinics.find(c=>c.hospital_name===this.selectedHospital&&c.department===this.selectedDepartment)
-const r=await fetch(`${this.API}/api/appointments?clinic_id=${c.id}`,{headers:this.auth()})
-this.appointments=await r.json()
-},
-
-async loadMemos(){
-const c=this.clinics.find(c=>c.hospital_name===this.selectedHospital&&c.department===this.selectedDepartment)
-const r=await fetch(`${this.API}/api/appointments/memos?clinic_id=${c.id}`,{headers:this.auth()})
-this.memos=await r.json()
-},
-
-generateCalendar(){
-const y=this.currentDate.getFullYear()
-const m=this.currentDate.getMonth()
-this.currentMonthYear=`${y}年${m+1}月`
-const start=new Date(y,m,1).getDay()
-const days=new Date(y,m+1,0).getDate()
-this.calendarDates=[]
-for(let i=0;i<start;i++) this.calendarDates.push({key:`e${i}`,day:'',date:null,isCurrentMonth:false})
-for(let d=1;d<=days;d++){
-const dt=new Date(y,m,d)
-this.calendarDates.push({
-key:`d${d}`,
-day:d,
-date:dt,
-isCurrentMonth:true,
-isToday:dt.toDateString()===new Date().toDateString()
-})
-}
-},
-
-previousMonth(){this.currentDate=new Date(this.currentDate.getFullYear(),this.currentDate.getMonth()-1,1);this.generateCalendar();this.saveState()},
-nextMonth(){this.currentDate=new Date(this.currentDate.getFullYear(),this.currentDate.getMonth()+1,1);this.generateCalendar();this.saveState()},
-
-selectDate(d){
-this.selectedDate=d.date
-this.selectedDateFormatted=d.date.toLocaleDateString('ja-JP')
-const m=this.memos.find(m=>m.memo_date===this.formatDate(d.date))
-this.currentMemo=m?m.content:''
-},
-
-async saveMemo(){
-const c=this.clinics.find(c=>c.hospital_name===this.selectedHospital&&c.department===this.selectedDepartment)
-await fetch(`${this.API}/api/appointments/memos`,{
-method:'POST',
-headers:{...this.auth(),'Content-Type':'application/json'},
-body:JSON.stringify({clinic_id:c.id,memo_date:this.formatDate(this.selectedDate),content:this.currentMemo})
-})
-await this.loadMemos()
-},
-
-exportJSON(){
-const blob=new Blob([JSON.stringify(this.memos,null,2)],{type:'application/json'})
-this.download(blob,'memos.json')
-},
-
-exportCSV(){
-let csv='date,content\n'
-this.memos.forEach(m=>csv+=`${m.memo_date},"${m.content.replace(/"/g,'""')}"\n`)
-this.download(new Blob([csv],{type:'text/csv'}),'memos.csv')
-},
-
-importJSON(e){
-const f=e.target.files[0]
-f.text().then(t=>JSON.parse(t).forEach(m=>this.memos.push(m)))
-},
-
-importCSV(e){
-const f=e.target.files[0]
-f.text().then(t=>{
-t.split('\n').slice(1).forEach(l=>{
-const [d,c]=l.split(',')
-if(d) this.memos.push({memo_date:d,content:c?.replace(/"/g,'')})
-})
-})
-},
-
-sendEmail(){
-this.exportJSON()
-window.location.href=`mailto:?subject=Clinic%20Note&body=JSONを添付してください`
-},
-
-formatDate(d){return d.toISOString().slice(0,10)},
-download(blob,name){
-const a=document.createElement('a')
-a.href=URL.createObjectURL(blob)
-a.download=name
-a.click()
-},
-
-auth(){
-return{
-'Authorization':`Bearer ${localStorage.getItem('authToken')}`,
-'X-Basic-Auth':localStorage.getItem('basicAuthToken')
-}
-}
-}}
-</script>
+        <!-- メール送信ダイアログ -->
+        <sl-dialog :open="showEmailDialog" @sl-request-close="showEmailDialog = false" label="メール送信">
+            <form @submit.prevent="sendEmail()">
+                <sl-input x-model="emailAddress" type="email" placeholder="送信先メールアドレス" required class="mb-4"></sl-input>
+                <sl-select x-model="emailDataType" placeholder="送信データ選択" required class="mb-4">
+                    <sl-option value="calendar">カレンダー全体</sl-option>
+                    <sl-option value="memos">個人メモ</sl-option>
+                    <sl-option value="doctor_memos">医師メモ</sl-option>
+                    <sl-option value="all">全データ</sl-option>
+                </sl-select>
+                <sl-button type="submit" variant="primary" class="w-full" :loading="loading">送信</sl-button>
+            </form>
+        </sl-dialog>
+    </div>
+    <script src="/calendar.js"></script>
+    <script>
+        function calendarData() {
+            return {
+                currentLang: 'ja',
+                loading: false,
+                clinics: [],
+                hospitals: [],
+                departments: [],
+                selectedHospital: '',
+                selectedDepartment: '',
+                currentDate: new Date(),
+                selectedDate: null,
+                selectedDateFormatted: '',
+                currentMemo: '',
+                currentDoctorNotes: '',
+                currentDiagnosisNotes: '',
+                currentPrescriptionNotes: '',
+                appointments: [],
+                memos: [],
+                doctorMemos: [],
+                calendarDates: [],
+                currentMonthYear: '',
+                successMessage: '',
+                daysOfWeek: [],
+                showEmailDialog: false,
+                emailAddress: '',
+                emailDataType: 'calendar',
+                translations: {
+                    ja: {
+                        title: 'カレンダー',
+                        subtitle: '通院日とメモの管理',
+                        selectClinic: '病院と診療科目を選択',
+                        hospitalPlaceholder: '病院を選択',
+                        departmentPlaceholder: '診療科目を選択',
+                        memo: 'メモ'
+                    },
+                    en: {
+                        title: 'Calendar',
+                        subtitle: 'Manage Appointments and Memos',
+                        selectClinic: 'Select Hospital and Department',
+                        hospitalPlaceholder: 'Select Hospital',
+                        departmentPlaceholder: 'Select Department',
+                        memo: 'Memo'
+                    }
+                },
+                async init() {
+                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                    this.currentLang = savedLang;
+                    this.daysOfWeek = this.currentLang === 'ja' ? ['日', '月', '火', '水', '木', '金', '土'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                    
+                    const authToken = localStorage.getItem('authToken');
+                    if (!authToken) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    
+                    if (!localStorage.getItem('basicAuthToken')) {
+                        localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
+                    }
+                    
+                    AOS.init({ duration: 1000, once: true });
+                    await this.loadClinics();
+                    this.generateCalendar();
+                },
+                switchLanguage(lang) {
+                    this.currentLang = lang;
+                    localStorage.setItem('clinicNoteLang', lang);
+                    this.daysOfWeek = lang === 'ja' ? ['日', '月', '火', '水', '木', '金', '土'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                },
+                async loadClinics() {
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const response = await fetch(`${API_URL}/api/clinics`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+                        if (response.ok) {
+                            this.clinics = await response.json();
+                            this.hospitals = [...new Set(this.clinics.map(c => c.hospital_name))];
+                        }
+                    } catch (err) {
+                        console.error('Load clinics error:', err);
+                    }
+                },
+                onHospitalChange() {
+                    this.selectedDepartment = '';
+                    this.departments = this.clinics
+                        .filter(c => c.hospital_name === this.selectedHospital)
+                        .map(c => c.department);
+                },
+                async onDepartmentChange() {
+                    await this.loadAppointments();
+                    await this.loadMemos();
+                    await this.loadDoctorMemos();
+                    this.generateCalendar();
+                },
+                async loadAppointments() {
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                        if (!clinic) return;
+                        const response = await fetch(`${API_URL}/api/appointments?clinic_id=${clinic.id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+                        if (response.ok) {
+                            this.appointments = await response.json();
+                        }
+                    } catch (err) {
+                        console.error('Load appointments error:', err);
+                    }
+                },
+                async loadMemos() {
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                        if (!clinic) return;
+                        const response = await fetch(`${API_URL}/api/appointments/memos?clinic_id=${clinic.id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+                        if (response.ok) {
+                            this.memos = await response.json();
+                        }
+                    } catch (err) {
+                        console.error('Load memos error:', err);
+                    }
+                },
+                async loadDoctorMemos() {
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                        if (!clinic) return;
+                        const response = await fetch(`${API_URL}/api/appointments/doctor-memos?clinic_id=${clinic.id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+                        if (response.ok) {
+                            this.doctorMemos = await response.json();
+                        }
+                    } catch (err) {
+                        console.error('Load doctor memos error:', err);
+                    }
+                },
+                generateCalendar() {
+                    const year = this.currentDate.getFullYear();
+                    const month = this.currentDate.getMonth();
+                    this.currentMonthYear = `${year}年${month + 1}月`;
+                    
+                    const firstDay = new Date(year, month, 1);
+                    const lastDay = new Date(year, month + 1, 0);
+                    const startDayOfWeek = firstDay.getDay();
+                    const daysInMonth = lastDay.getDate();
+                    
+                    this.calendarDates = [];
+                    
+                    const today = new Date();
+                    for (let day = 1; day <= daysInMonth; day++) {
+                        const date = new Date(year, month, day);
+                        const dateStr = this.formatDate(date);
+                        const hasAppointment = this.appointments.some(a => a.appointment_date === dateStr);
+                        const hasMemo = this.memos.some(m => m.memo_date === dateStr) || this.doctorMemos.some(dm => dm.memo_date === dateStr);
+                        const isToday = date.toDateString() === today.toDateString();
+                        
+                        this.calendarDates.push({
+                            key: `current-${day}`,
+                            day: day,
+                            date: date,
+                            isCurrentMonth: true,
+                            isToday: isToday,
+                            hasAppointment: hasAppointment,
+                            hasMemo: hasMemo
+                        });
+                    }
+                },
+                previousMonth() {
+                    this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
+                    this.generateCalendar();
+                },
+                nextMonth() {
+                    this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
+                    this.generateCalendar();
+                },
+                async selectDate(dateObj) {
+                    this.selectedDate = dateObj.date;
+                    this.selectedDateFormatted = this.formatDateForDisplay(dateObj.date);
+                    const dateStr = this.formatDate(dateObj.date);
+                    
+                    const memo = this.memos.find(m => m.memo_date === dateStr);
+                    this.currentMemo = memo ? memo.content : '';
+                    
+                    const doctorMemo = this.doctorMemos.find(dm => dm.memo_date === dateStr);
+                    if (doctorMemo) {
+                        this.currentDoctorNotes = doctorMemo.doctor_notes || '';
+                        this.currentDiagnosisNotes = doctorMemo.diagnosis_notes || '';
+                        this.currentPrescriptionNotes = doctorMemo.prescription_notes || '';
+                    } else {
+                        this.clearDoctorMemo();
+                    }
+                },
+                async saveMemo() {
+                    this.loading = true;
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                        
+                        await fetch(`${API_URL}/api/appointments/memos`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            },
+                            body: JSON.stringify({
+                                clinic_id: clinic.id,
+                                memo_date: this.formatDate(this.selectedDate),
+                                content: this.currentMemo
+                            })
+                        });
+                        
+                        this.successMessage = '個人メモを保存しました';
+                        await this.loadMemos();
+                        this.generateCalendar();
+                    } catch (err) {
+                        console.error('Save memo error:', err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async saveDoctorMemo() {
+                    this.loading = true;
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                        
+                        await fetch(`${API_URL}/api/appointments/doctor-memos`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            },
+                            body: JSON.stringify({
+                                clinic_id: clinic.id,
+                                memo_date: this.formatDate(this.selectedDate),
+                                doctor_notes: this.currentDoctorNotes,
+                                diagnosis_notes: this.currentDiagnosisNotes,
+                                prescription_notes: this.currentPrescriptionNotes
+                            })
+                        });
+                        
+                        this.successMessage = '医師メモを保存しました';
+                        await this.loadDoctorMemos();
+                        this.generateCalendar();
+                    } catch (err) {
+                        console.error('Save doctor memo error:', err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                clearDoctorMemo() {
+                    this.currentDoctorNotes = '';
+                    this.currentDiagnosisNotes = '';
+                    this.currentPrescriptionNotes = '';
+                },
+                formatDate(date) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                },
+                formatDateForDisplay(date) {
+                    if (this.currentLang === 'ja') {
+                        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+                    }
+                    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                },
+                printCalendar() {
+                    window.print();
+                },
+                exportCalendarJSON() {
+                    const data = {
+                        hospital: this.selectedHospital,
+                        department: this.selectedDepartment,
+                        appointments: this.appointments,
+                        memos: this.memos,
+                        doctorMemos: this.doctorMemos
+                    };
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `calendar_${this.selectedHospital}_${this.selectedDepartment}.json`;
+                    a.click();
+                },
+                exportCalendarCSV() {
+                    let csv = 'Date,Hospital,Department,Type,Content\n';
+                    this.memos.forEach(m => {
+                        csv += `"${m.memo_date}","${this.selectedHospital}","${this.selectedDepartment}","Personal Memo","${(m.content || '').replace(/"/g, '""')}"\n`;
+                    });
+                    this.doctorMemos.forEach(dm => {
+                        csv += `"${dm.memo_date}","${this.selectedHospital}","${this.selectedDepartment}","Doctor Memo","${(dm.doctor_notes || '').replace(/"/g, '""')}"\n`;
+                    });
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `calendar_${this.selectedHospital}_${this.selectedDepartment}.csv`;
+                    a.click();
+                },
+                async sendEmail() {
+                    alert('メール送信機能は実装準備中です。データをエクスポートしてメールに添付してください。');
+                    this.showEmailDialog = false;
+                }
+            };
+        }
+    </script>
 </body>
 </html>
