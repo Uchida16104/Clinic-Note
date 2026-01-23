@@ -1,4 +1,4 @@
-// Clinic Note - Appointments Routes
+// Clinic Note - Appointments Routes (完全版)
 const express = require('express');
 const router = express.Router();
 const { query } = require('../db/database');
