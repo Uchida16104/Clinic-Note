@@ -1,4 +1,4 @@
-// Clinic Note - Database Configuration
+// Clinic Note - Database Configuration (完全版)
 const { Pool } = require('pg');
 
 // Create PostgreSQL connection pool
