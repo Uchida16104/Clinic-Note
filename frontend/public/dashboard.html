@@ -5,9 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clinic Note - ダッシュボード</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
     <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
@@ -15,17 +13,7 @@
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
     <link rel="stylesheet" href="/custom.css">
-    <style>
-        @media (max-width: 640px) {
-            .container { padding-left: 1rem; padding-right: 1rem; }
-            h1 { font-size: 1.875rem; }
-            h2 { font-size: 1.5rem; }
-            .grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
-        }
-        @media (min-width: 641px) and (max-width: 768px) {
-            .grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-    </style>
+    <script src="/sync-utility.js"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="dashboardData()" x-init="init()" class="container mx-auto px-4 py-8">
@@ -33,6 +21,11 @@
             <div>
                 <h1 class="text-3xl sm:text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
                 <p class="text-gray-600 mt-2 text-sm sm:text-base" x-text="translations[currentLang].subtitle"></p>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="iconify" :data-icon="isOnline ? 'mdi:cloud-check' : 'mdi:cloud-off'" :class="isOnline ? 'text-green-500' : 'text-gray-400'"></span>
+                    <span class="text-xs" :class="isOnline ? 'text-green-600' : 'text-gray-500'" x-text="isOnline ? 'オンライン' : 'オフライン'"></span>
+                    <span x-show="syncing" class="text-xs text-blue-600">同期中...</span>
+                </div>
             </div>
             <div class="flex gap-2">
                 <sl-button-group label="Language">
@@ -43,6 +36,9 @@
                         <span class="iconify" data-icon="twemoji:flag-united-states"></span>
                     </sl-button>
                 </sl-button-group>
+                <sl-button variant="default" @click="manualSync()" :loading="syncing" size="small">
+                    <span class="iconify" data-icon="mdi:sync"></span>
+                </sl-button>
                 <sl-button variant="danger" @click="logout()" size="small">
                     <span class="iconify" data-icon="mdi:logout"></span>
                 </sl-button>
@@ -157,6 +153,8 @@
             return {
                 currentLang: 'ja',
                 loading: false,
+                syncing: false,
+                isOnline: navigator.onLine,
                 clinics: [],
                 appointments: [],
                 showAddClinicDialog: false,
@@ -165,9 +163,6 @@
                 editingClinic: null,
                 newClinic: { hospital_name: '', department: '', diagnosis: '', medication: '' },
                 newAppointment: { date: '', time: '' },
-                notificationCheckInterval: null,
-                syncInterval: null,
-                db: null,
                 translations: {
                     ja: {
                         title: 'ダッシュボード',
@@ -232,30 +227,46 @@
                         if (!localStorage.getItem('basicAuthToken')) {
                             localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
                         }
-                        await this.initPouchDB();
+                        
+                        // 同期ユーティリティ初期化
+                        const userId = localStorage.getItem('userId');
+                        if (userId && window.clinicNoteSync) {
+                            await window.clinicNoteSync.init(userId);
+                            
+                            // 同期通知を受け取る
+                            window.clinicNoteSync.onSync((change) => {
+                                console.log('Sync notification:', change);
+                                this.loadClinics();
+                                this.loadAppointments();
+                            });
+                        }
+                        
                         AOS.init({ duration: 1000, once: true });
                         await this.loadClinics();
                         await this.loadAppointments();
                         await this.requestNotificationPermission();
                         this.startNotificationCheck();
-                        this.startAutoSync();
+                        
+                        // ネットワーク状態監視
+                        window.addEventListener('online', () => {
+                            this.isOnline = true;
+                            this.manualSync();
+                        });
+                        window.addEventListener('offline', () => {
+                            this.isOnline = false;
+                        });
                     } catch (error) {
                         console.error('Initialization error:', error);
                     }
                 },
-                async initPouchDB() {
-                    try {
-                        const userId = localStorage.getItem('userId') || 'user';
-                        this.db = new PouchDB(`clinic-note-${userId}`);
-                    } catch (err) {
-                        console.error('PouchDB init error:', err);
-                    }
-                },
-                startAutoSync() {
-                    this.syncInterval = setInterval(async () => {
+                async manualSync() {
+                    if (window.clinicNoteSync) {
+                        this.syncing = true;
+                        await window.clinicNoteSync.syncNow();
                         await this.loadClinics();
                         await this.loadAppointments();
-                    }, 30000);
+                        this.syncing = false;
+                    }
                 },
                 switchLanguage(lang) {
                     this.currentLang = lang;
@@ -299,8 +310,8 @@
                 },
                 getClinicAppointments(clinicId) {
                     return this.appointments.filter(appt => appt.clinic_id === clinicId).sort((a, b) => {
-                        const dateA = new Date(a.appointment_date + ' ' + a.appointment_time);
-                        const dateB = new Date(b.appointment_date + ' ' + b.appointment_time);
+                        const dateA = new Date(a.appointment_date + ' ' + (a.appointment_time || '00:00'));
+                        const dateB = new Date(b.appointment_date + ' ' + (b.appointment_time || '00:00'));
                         return dateA - dateB;
                     });
                 },
@@ -353,6 +364,10 @@
                             body: JSON.stringify(this.newClinic)
                         });
                         if (response.ok) {
+                            const newClinicData = await response.json();
+                            if (window.clinicNoteSync) {
+                                await window.clinicNoteSync.save('clinic', newClinicData.clinic);
+                            }
                             await this.loadClinics();
                             this.closeClinicDialog();
                         }
@@ -401,6 +416,9 @@
                                 'X-Basic-Auth': basicAuthToken
                             }
                         });
+                        if (window.clinicNoteSync) {
+                            await window.clinicNoteSync.delete('clinic', id);
+                        }
                         await this.loadClinics();
                         await this.loadAppointments();
                     } catch (err) {
@@ -417,7 +435,7 @@
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        await fetch(`${API_URL}/api/appointments`, {
+                        const response = await fetch(`${API_URL}/api/appointments`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -430,9 +448,15 @@
                                 appointment_time: this.newAppointment.time
                             })
                         });
-                        await this.loadAppointments();
-                        this.showAppointmentDialog = false;
-                        this.newAppointment = { date: '', time: '' };
+                        if (response.ok) {
+                            const newApptData = await response.json();
+                            if (window.clinicNoteSync) {
+                                await window.clinicNoteSync.save('appointment', newApptData.appointment);
+                            }
+                            await this.loadAppointments();
+                            this.showAppointmentDialog = false;
+                            this.newAppointment = { date: '', time: '' };
+                        }
                     } catch (err) {
                         console.error('Add appointment error:', err);
                     } finally {
@@ -452,6 +476,9 @@
                                 'X-Basic-Auth': basicAuthToken
                             }
                         });
+                        if (window.clinicNoteSync) {
+                            await window.clinicNoteSync.delete('appointment', id);
+                        }
                         await this.loadAppointments();
                     } catch (err) {
                         console.error('Delete appointment error:', err);
@@ -464,7 +491,7 @@
                 },
                 startNotificationCheck() {
                     this.checkNotifications();
-                    this.notificationCheckInterval = setInterval(() => {
+                    setInterval(() => {
                         this.checkNotifications();
                     }, 60000);
                 },
@@ -490,8 +517,9 @@
                     }
                 },
                 logout() {
-                    if (this.notificationCheckInterval) clearInterval(this.notificationCheckInterval);
-                    if (this.syncInterval) clearInterval(this.syncInterval);
+                    if (window.clinicNoteSync) {
+                        window.clinicNoteSync.destroy();
+                    }
                     localStorage.removeItem('authToken');
                     localStorage.removeItem('userId');
                     window.location.href = '/login.html';
