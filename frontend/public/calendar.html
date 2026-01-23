@@ -331,31 +331,39 @@
                 generateCalendar() {
                     const year = this.currentDate.getFullYear();
                     const month = this.currentDate.getMonth();
-                    this.currentMonthYear = `${year}年${month + 1}月`;
-                    
-                    const firstDay = new Date(year, month, 1);
-                    const lastDay = new Date(year, month + 1, 0);
-                    const startDayOfWeek = firstDay.getDay();
-                    const daysInMonth = lastDay.getDate();
-                    
+                    this.currentMonthYear =
+                        this.currentLang === 'ja'
+                        ? `${year}年${month + 1}月`
+                        : `${calendarUtils.getMonthName(month, 'en')} ${year}`;
+                    const firstDayOfMonth = new Date(year, month, 1);
+                    const startDayOfWeek = firstDayOfMonth.getDay();
+                    const daysInMonth = new Date(year, month + 1, 0).getDate();
                     this.calendarDates = [];
-                    
                     const today = new Date();
+                    for (let i = 0; i < startDayOfWeek; i++) {
+                        this.calendarDates.push({
+                            key: `empty-${i}`,
+                            day: '',
+                            date: null,
+                            isCurrentMonth: false,
+                            isToday: false,
+                            hasAppointment: false,
+                            hasMemo: false
+                        });
+                    }
                     for (let day = 1; day <= daysInMonth; day++) {
                         const date = new Date(year, month, day);
                         const dateStr = this.formatDate(date);
-                        const hasAppointment = this.appointments.some(a => a.appointment_date === dateStr);
-                        const hasMemo = this.memos.some(m => m.memo_date === dateStr) || this.doctorMemos.some(dm => dm.memo_date === dateStr);
-                        const isToday = date.toDateString() === today.toDateString();
-                        
                         this.calendarDates.push({
-                            key: `current-${day}`,
+                            key: `day-${day}`,
                             day: day,
                             date: date,
                             isCurrentMonth: true,
-                            isToday: isToday,
-                            hasAppointment: hasAppointment,
-                            hasMemo: hasMemo
+                            isToday: date.toDateString() === today.toDateString(),
+                            hasAppointment: this.appointments.some(a => a.appointment_date === dateStr),
+                            hasMemo:
+                                this.memos.some(m => m.memo_date === dateStr) ||
+                                this.doctorMemos.some(dm => dm.memo_date === dateStr)
                         });
                     }
                 },
