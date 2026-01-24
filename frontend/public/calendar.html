@@ -18,6 +18,14 @@
     <script src="https://unpkg.com/lottie-web/build/player/lottie.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <link rel="stylesheet" href="/custom.css">
+    <style>
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+        .memo-date { background-color: #fef3c7 !important; }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen" hx-push-url="true">
     <div x-data="calendarData()" x-init="init()" class="container mx-auto px-4 py-8">
@@ -66,6 +74,29 @@
             </div>
         </div>
 
+        <!-- Export/Import/Print/Email Buttons -->
+        <div x-show="selectedHospital && selectedDepartment" class="bg-white rounded-2xl shadow-xl p-6 mb-8" data-aos="fade-up">
+            <h2 class="text-2xl font-bold mb-4" x-text="translations[currentLang].actions"></h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <sl-button variant="primary" @click="showExportDialog = true">
+                    <span class="iconify mr-2" data-icon="mdi:download"></span>
+                    <span x-text="translations[currentLang].export"></span>
+                </sl-button>
+                <sl-button variant="success" @click="showImportDialog = true">
+                    <span class="iconify mr-2" data-icon="mdi:upload"></span>
+                    <span x-text="translations[currentLang].import"></span>
+                </sl-button>
+                <sl-button variant="warning" @click="showPrintDialog = true">
+                    <span class="iconify mr-2" data-icon="mdi:printer"></span>
+                    <span x-text="translations[currentLang].print"></span>
+                </sl-button>
+                <sl-button variant="neutral" @click="showEmailDialog = true">
+                    <span class="iconify mr-2" data-icon="mdi:email"></span>
+                    <span x-text="translations[currentLang].email"></span>
+                </sl-button>
+            </div>
+        </div>
+
         <!-- Calendar -->
         <div x-show="selectedHospital && selectedDepartment" class="bg-white rounded-2xl shadow-xl p-6 mb-8" data-aos="fade-up" data-aos-delay="200">
             <div class="flex justify-between items-center mb-6">
@@ -90,7 +121,7 @@
                             'bg-gray-100 text-gray-400': !date.isCurrentMonth,
                             'bg-blue-500 text-white font-bold': date.isToday,
                             'bg-green-100 border-green-500': date.hasAppointment,
-                            'bg-yellow-100 border-yellow-500': date.hasMemo && !date.hasAppointment,
+                            'memo-date': date.hasMemo && !date.hasAppointment,
                             'hover:bg-indigo-50': date.isCurrentMonth
                         }">
                         <div class="text-center">
@@ -136,20 +167,43 @@
                                         <span x-text="getDaysAgo(memo.date)"></span>
                                     </sl-badge>
                                 </div>
-                                <div class="text-gray-600 whitespace-pre-wrap" x-text="memo.content"></div>
+                                <div class="text-gray-600 whitespace-pre-wrap">
+                                    <div class="mb-2" x-show="memo.patient_memo">
+                                        <strong x-text="translations[currentLang].patientMemo + ':'"></strong>
+                                        <div x-text="memo.patient_memo"></div>
+                                    </div>
+                                    <div x-show="memo.doctor_memo">
+                                        <strong x-text="translations[currentLang].doctorMemo + ':'"></strong>
+                                        <div x-text="memo.doctor_memo"></div>
+                                    </div>
+                                </div>
                             </div>
                         </sl-card>
                     </template>
                 </div>
             </div>
 
-            <!-- Memo Editor -->
-            <sl-textarea
-                x-model="currentMemo"
-                :placeholder="translations[currentLang].memoPlaceholder"
-                rows="6"
-                resize="auto">
-            </sl-textarea>
+            <!-- Patient Memo Editor -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].patientMemo"></label>
+                <sl-textarea
+                    x-model="currentPatientMemo"
+                    :placeholder="translations[currentLang].patientMemoPlaceholder"
+                    rows="4"
+                    resize="auto">
+                </sl-textarea>
+            </div>
+
+            <!-- Doctor Memo Editor -->
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].doctorMemo"></label>
+                <sl-textarea
+                    x-model="currentDoctorMemo"
+                    :placeholder="translations[currentLang].doctorMemoPlaceholder"
+                    rows="4"
+                    resize="auto">
+                </sl-textarea>
+            </div>
 
             <div class="mt-4 flex gap-2">
                 <sl-button variant="primary" @click="saveMemo()" :loading="loading">
@@ -160,7 +214,7 @@
                     <span class="iconify mr-2" data-icon="mdi:eraser"></span>
                     <span x-text="translations[currentLang].clear"></span>
                 </sl-button>
-                <sl-button variant="danger" @click="deleteMemo()" x-show="currentMemo && hasExistingMemo">
+                <sl-button variant="danger" @click="deleteMemo()" x-show="hasExistingMemo">
                     <span class="iconify mr-2" data-icon="mdi:delete"></span>
                     <span x-text="translations[currentLang].delete"></span>
                 </sl-button>
@@ -193,7 +247,16 @@
                                     <span class="iconify mr-1" :data-icon="isAppointmentDate(memo.date) ? 'mdi:calendar-check' : 'mdi:note'"></span>
                                 </sl-badge>
                             </div>
-                            <div class="text-sm text-gray-600 line-clamp-3 whitespace-pre-wrap" x-text="memo.content"></div>
+                            <div class="text-sm text-gray-600">
+                                <div class="mb-2" x-show="memo.patient_memo">
+                                    <strong x-text="translations[currentLang].patientMemo + ':'"></strong>
+                                    <div class="line-clamp-2 whitespace-pre-wrap" x-text="memo.patient_memo"></div>
+                                </div>
+                                <div x-show="memo.doctor_memo">
+                                    <strong x-text="translations[currentLang].doctorMemo + ':'"></strong>
+                                    <div class="line-clamp-2 whitespace-pre-wrap" x-text="memo.doctor_memo"></div>
+                                </div>
+                            </div>
                             <div class="mt-2 flex gap-2">
                                 <sl-button size="small" variant="primary" @click.stop="jumpToMemoDate(memo.date)">
                                     <span class="iconify" data-icon="mdi:eye"></span>
@@ -207,583 +270,800 @@
                 </template>
             </div>
         </div>
-    </div>
 
-    <svg width="0" height="0">
-        <defs>
-            <linearGradient id="memoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stop-color="#fde68a"/>
-                <stop offset="100%" stop-color="#fca5a5"/>
-            </linearGradient>
-        </defs>
-    </svg>
+        <!-- Export Dialog -->
+        <sl-dialog :open="showExportDialog" @sl-request-close="showExportDialog = false" :label="translations[currentLang].export">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].exportFormat"></label>
+                    <sl-select x-model="exportFormat" size="large">
+                        <sl-option value="json">JSON</sl-option>
+                        <sl-option value="csv">CSV</sl-option>
+                    </sl-select>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].startDate"></label>
+                        <sl-input type="date" x-model="exportStartDate" size="large"></sl-input>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].endDate"></label>
+                        <sl-input type="date" x-model="exportEndDate" size="large"></sl-input>
+                    </div>
+                </div>
+                <sl-button variant="primary" class="w-full" @click="exportData()">
+                    <span class="iconify mr-2" data-icon="mdi:download"></span>
+                    <span x-text="translations[currentLang].exportButton"></span>
+                </sl-button>
+            </div>
+        </sl-dialog>
+
+        <!-- Import Dialog -->
+        <sl-dialog :open="showImportDialog" @sl-request-close="showImportDialog = false" :label="translations[currentLang].import">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].selectFile"></label>
+                    <input type="file" @change="handleFileSelect" accept=".json,.csv" class="w-full p-2 border rounded">
+                </div>
+                <sl-button variant="success" class="w-full" @click="importData()" :disabled="!selectedFile">
+                    <span class="iconify mr-2" data-icon="mdi:upload"></span>
+                    <span x-text="translations[currentLang].importButton"></span>
+                </sl-button>
+            </div>
+        </sl-dialog>
+
+        <!-- Print Dialog -->
+        <sl-dialog :open="showPrintDialog" @sl-request-close="showPrintDialog = false" :label="translations[currentLang].print">
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].startDate"></label>
+                        <sl-input type="date" x-model="printStartDate" size="large"></sl-input>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].endDate"></label>
+                        <sl-input type="date" x-model="printEndDate" size="large"></sl-input>
+                    </div>
+                </div>
+                <sl-button variant="warning" class="w-full" @click="printMemos()">
+                    <span class="iconify mr-2" data-icon="mdi:printer"></span>
+                    <span x-text="translations[currentLang].printButton"></span>
+                </sl-button>
+            </div>
+        </sl-dialog>
+
+        <!-- Email Dialog -->
+        <sl-dialog :open="showEmailDialog" @sl-request-close="showEmailDialog = false" :label="translations[currentLang].email">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].emailAddress"></label>
+                    <sl-input type="email" x-model="emailAddress" size="large" :placeholder="translations[currentLang].emailPlaceholder"></sl-input>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].startDate"></label>
+                        <sl-input type="date" x-model="emailStartDate" size="large"></sl-input>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].endDate"></label>
+                        <sl-input type="date" x-model="emailEndDate" size="large"></sl-input>
+                    </div>
+                </div>
+                <sl-button variant="neutral" class="w-full" @click="sendEmail()">
+                    <span class="iconify mr-2" data-icon="mdi:email-send"></span>
+                    <span x-text="translations[currentLang].sendButton"></span>
+                </sl-button>
+            </div>
+        </sl-dialog>
+
+        <!-- Print Area (Hidden) -->
+        <div id="printArea" class="hidden"></div>
+    </div>
 
     <script type="module" src="/calendar.js"></script>
     <script>
-        function calendarData() {
-            return {
-                currentLang: 'ja',
-                loading: false,
-                clinics: [],
-                hospitals: [],
-                departments: [],
-                selectedHospital: '',
-                selectedDepartment: '',
-                currentDate: new Date(),
-                selectedDate: null,
-                selectedDateFormatted: '',
-                currentMemo: '',
-                previousMemos: [],
-                appointments: [],
-                memos: [],
-                calendarDates: [],
-                currentMonthYear: '',
-                isAppointmentDay: false,
-                successMessage: '',
-                errorMessage: '',
-                daysOfWeek: [],
-                hasExistingMemo: false,
-                allMemosList: [],
-                _memoDB: null,
-                _indexedDB: null,
-                translations: {
-                    ja: {
-                        title: 'カレンダー',
-                        subtitle: '通院日とメモの管理',
-                        selectClinic: '病院と診療科目を選択',
-                        hospitalPlaceholder: '病院を選択',
-                        departmentPlaceholder: '診療科目を選択',
-                        memo: 'メモ',
-                        appointmentToday: '本日は通院日です！',
-                        previousMemos: 'これまでのメモ',
-                        memoPlaceholder: 'メモを入力してください...',
-                        save: '保存',
-                        clear: 'クリア',
-                        delete: '削除',
-                        allMemos: 'メモ一覧'
+function calendarData() {
+    return {
+        currentLang: 'ja',
+        loading: false,
+        clinics: [],
+        hospitals: [],
+        departments: [],
+        selectedHospital: '',
+        selectedDepartment: '',
+        currentDate: new Date(),
+        selectedDate: null,
+        selectedDateFormatted: '',
+        currentPatientMemo: '',
+        currentDoctorMemo: '',
+        previousMemos: [],
+        appointments: [],
+        memos: [],
+        calendarDates: [],
+        currentMonthYear: '',
+        isAppointmentDay: false,
+        successMessage: '',
+        errorMessage: '',
+        daysOfWeek: [],
+        hasExistingMemo: false,
+        allMemosList: [],
+        showExportDialog: false,
+        showImportDialog: false,
+        showPrintDialog: false,
+        showEmailDialog: false,
+        exportFormat: 'json',
+        exportStartDate: '',
+        exportEndDate: '',
+        printStartDate: '',
+        printEndDate: '',
+        emailStartDate: '',
+        emailEndDate: '',
+        emailAddress: '',
+        selectedFile: null,
+        translations: {
+            ja: {
+                title: 'カレンダー',
+                subtitle: '通院日とメモの管理',
+                selectClinic: '病院と診療科目を選択',
+                hospitalPlaceholder: '病院を選択',
+                departmentPlaceholder: '診療科目を選択',
+                actions: 'アクション',
+                export: 'エクスポート',
+                import: 'インポート',
+                print: '印刷',
+                email: 'メール送信',
+                memo: 'メモ',
+                patientMemo: '患者メモ',
+                doctorMemo: '医師診断メモ',
+                appointmentToday: '本日は通院日です！',
+                previousMemos: 'これまでのメモ',
+                patientMemoPlaceholder: '患者メモを入力してください...',
+                doctorMemoPlaceholder: '医師診断メモを入力してください...',
+                save: '保存',
+                clear: 'クリア',
+                delete: '削除',
+                allMemos: 'メモ一覧',
+                exportFormat: 'エクスポート形式',
+                startDate: '開始日',
+                endDate: '終了日',
+                exportButton: 'エクスポート',
+                importButton: 'インポート',
+                printButton: '印刷',
+                sendButton: '送信',
+                selectFile: 'ファイルを選択',
+                emailAddress: 'メールアドレス',
+                emailPlaceholder: 'example@example.com'
+            },
+            en: {
+                title: 'Calendar',
+                subtitle: 'Manage Appointments and Memos',
+                selectClinic: 'Select Hospital and Department',
+                hospitalPlaceholder: 'Select Hospital',
+                departmentPlaceholder: 'Select Department',
+                actions: 'Actions',
+                export: 'Export',
+                import: 'Import',
+                print: 'Print',
+                email: 'Send Email',
+                memo: 'Memo',
+                patientMemo: 'Patient Memo',
+                doctorMemo: 'Doctor Diagnosis Memo',
+                appointmentToday: 'You have an appointment today!',
+                previousMemos: 'Previous Memos',
+                patientMemoPlaceholder: 'Enter patient memo...',
+                doctorMemoPlaceholder: 'Enter doctor diagnosis memo...',
+                save: 'Save',
+                clear: 'Clear',
+                delete: 'Delete',
+                allMemos: 'All Memos',
+                exportFormat: 'Export Format',
+                startDate: 'Start Date',
+                endDate: 'End Date',
+                exportButton: 'Export',
+                importButton: 'Import',
+                printButton: 'Print',
+                sendButton: 'Send',
+                selectFile: 'Select File',
+                emailAddress: 'Email Address',
+                emailPlaceholder: 'example@example.com'
+            }
+        },
+        async init() {
+            const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+            this.currentLang = savedLang;
+            this.daysOfWeek = this.currentLang === 'ja' ? ['日', '月', '火', '水', '木', '金', '土'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const authToken = localStorage.getItem('authToken');
+            if (!authToken) {
+                window.location.href = '/login.html';
+                return;
+            }
+            
+            if (!localStorage.getItem('basicAuthToken')) {
+                localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
+            }
+            
+            AOS.init({ duration: 1000, once: true });
+            await this.loadClinics();
+            this.generateCalendar();
+        },
+        switchLanguage(lang) {
+            this.currentLang = lang;
+            localStorage.setItem('clinicNoteLang', lang);
+            this.daysOfWeek = lang === 'ja' ? ['日', '月', '火', '水', '木', '金', '土'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        },
+        async loadClinics() {
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const response = await fetch(`${API_URL}/api/clinics`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-Basic-Auth': basicAuthToken
+                    }
+                });
+                if (response.ok) {
+                    this.clinics = await response.json();
+                    this.hospitals = [...new Set(this.clinics.map(c => c.hospital_name))];
+                }
+            } catch (err) {
+                console.error('Load clinics error:', err);
+            }
+        },
+        onHospitalChange() {
+            this.selectedDepartment = '';
+            this.departments = this.clinics
+                .filter(c => c.hospital_name === this.selectedHospital)
+                .map(c => c.department);
+        },
+        async onDepartmentChange() {
+            await this.loadAppointments();
+            await this.loadMemos();
+            this.updateAllMemosList();
+            this.generateCalendar();
+        },
+        async loadAppointments() {
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                if (!clinic) return;
+                const response = await fetch(`${API_URL}/api/appointments?clinic_id=${clinic.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-Basic-Auth': basicAuthToken
+                    }
+                });
+                if (response.ok) {
+                    this.appointments = await response.json();
+                }
+            } catch (err) {
+                console.error('Load appointments error:', err);
+            }
+        },
+        async loadMemos() {
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                if (!clinic) return;
+                const response = await fetch(`${API_URL}/api/appointments?clinic_id=${clinic.id}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-Basic-Auth': basicAuthToken
+                    }
+                });
+                if (response.ok) {
+                    this.appointments = await response.json();
+                }
+            } catch (err) {
+                console.error('Load appointments error:', err);
+            }
+        },
+        updateAllMemosList() {
+            this.allMemosList = this.memos
+                .filter(m => m.patient_memo || m.doctor_memo)
+                .map(m => ({
+                    date: m.memo_date,
+                    patient_memo: m.patient_memo,
+                    doctor_memo: m.doctor_memo
+                }))
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+        },
+        generateCalendar() {
+            const year = this.currentDate.getFullYear();
+            const month = this.currentDate.getMonth();
+            this.currentMonthYear = `${year}年${month + 1}月`;
+            if (this.currentLang === 'en') {
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                this.currentMonthYear = `${monthNames[month]} ${year}`;
+            }
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const prevLastDay = new Date(year, month, 0);
+            const startDayOfWeek = firstDay.getDay();
+            const daysInMonth = lastDay.getDate();
+            const daysInPrevMonth = prevLastDay.getDate();
+            this.calendarDates = [];
+            
+            for (let i = startDayOfWeek - 1; i >= 0; i--) {
+                const day = daysInPrevMonth - i;
+                const date = new Date(year, month - 1, day);
+                const dateStr = this.formatDate(date);
+                this.calendarDates.push({
+                    key: `prev-${day}`,
+                    day: day,
+                    date: date,
+                    isCurrentMonth: false,
+                    isToday: false,
+                    hasAppointment: false,
+                    hasMemo: this.memos.some(m => m.memo_date === dateStr && (m.patient_memo || m.doctor_memo))
+                });
+            }
+            const today = new Date();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateStr = this.formatDate(date);
+                const hasAppointment = this.appointments.some(a => a.appointment_date === dateStr);
+                const hasMemo = this.memos.some(m => m.memo_date === dateStr && (m.patient_memo || m.doctor_memo));
+                const isToday = date.toDateString() === today.toDateString();
+                this.calendarDates.push({
+                    key: `current-${day}`,
+                    day: day,
+                    date: date,
+                    isCurrentMonth: true,
+                    isToday: isToday,
+                    hasAppointment: hasAppointment,
+                    hasMemo: hasMemo
+                });
+            }
+            const remainingDays = 42 - this.calendarDates.length;
+            for (let day = 1; day <= remainingDays; day++) {
+                const date = new Date(year, month + 1, day);
+                const dateStr = this.formatDate(date);
+                this.calendarDates.push({
+                    key: `next-${day}`,
+                    day: day,
+                    date: date,
+                    isCurrentMonth: false,
+                    isToday: false,
+                    hasAppointment: false,
+                    hasMemo: this.memos.some(m => m.memo_date === dateStr && (m.patient_memo || m.doctor_memo))
+                });
+            }
+        },
+        previousMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
+            this.generateCalendar();
+        },
+        nextMonth() {
+            this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
+            this.generateCalendar();
+        },
+        async selectDate(dateObj) {
+            this.selectedDate = dateObj.date;
+            this.selectedDateFormatted = this.formatDateForDisplay(dateObj.date);
+            const dateStr = this.formatDate(dateObj.date);
+            
+            const memo = this.memos.find(m => m.memo_date === dateStr);
+            this.currentPatientMemo = memo?.patient_memo || '';
+            this.currentDoctorMemo = memo?.doctor_memo || '';
+            this.hasExistingMemo = !!memo;
+            
+            this.isAppointmentDay = this.appointments.some(a => a.appointment_date === dateStr);
+            
+            if (this.isAppointmentDay) {
+                const allPastMemos = this.memos
+                    .filter(m => m.memo_date < dateStr && (m.patient_memo || m.doctor_memo))
+                    .map(m => ({
+                        date: m.memo_date,
+                        patient_memo: m.patient_memo,
+                        doctor_memo: m.doctor_memo
+                    }))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 10);
+                this.previousMemos = allPastMemos;
+            } else {
+                this.previousMemos = [];
+            }
+        },
+        async saveMemo() {
+            if (!this.selectedDate || (!this.currentPatientMemo.trim() && !this.currentDoctorMemo.trim())) {
+                this.errorMessage = this.currentLang === 'ja' ? 'メモを入力してください' : 'Please enter memo';
+                return;
+            }
+            this.loading = true;
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                const dateStr = this.formatDate(this.selectedDate);
+                
+                const response = await fetch(`${API_URL}/api/appointments/memos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-Basic-Auth': basicAuthToken
                     },
-                    en: {
-                        title: 'Calendar',
-                        subtitle: 'Manage Appointments and Memos',
-                        selectClinic: 'Select Hospital and Department',
-                        hospitalPlaceholder: 'Select Hospital',
-                        departmentPlaceholder: 'Select Department',
-                        memo: 'Memo',
-                        appointmentToday: 'You have an appointment today!',
-                        previousMemos: 'Previous Memos',
-                        memoPlaceholder: 'Enter your memo...',
-                        save: 'Save',
-                        clear: 'Clear',
-                        delete: 'Delete',
-                        allMemos: 'All Memos'
-                    }
-                },
-                async init() {
-                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
-                    this.currentLang = savedLang;
-                    this.daysOfWeek = this.currentLang === 'ja' ? ['日', '月', '火', '水', '木', '金', '土'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                    const authToken = localStorage.getItem('authToken');
-                    if (!authToken) {
-                        window.location.href = '/login.html';
-                        return;
-                    }
-                    
-                    if (!localStorage.getItem('basicAuthToken')) {
-                        localStorage.setItem('basicAuthToken', btoa('admin:secure_password_123'));
-                    }
-                    
-                    AOS.init({ duration: 1000, once: true });
-                    await this.initPouchDB();
-                    await this.initIndexedDB();
-                    await this.loadClinics();
-                    this.generateCalendar();
-                },
-                async initPouchDB() {
-                    try {
-                        this._memoDB = new PouchDB('clinic-note-memos');
-                        console.log('PouchDB initialized');
-                    } catch (err) {
-                        console.error('PouchDB init error:', err);
-                    }
-                },
-                async initIndexedDB() {
-                    return new Promise((resolve, reject) => {
-                        const request = indexedDB.open('ClinicNoteMemos', 1);
-                        request.onerror = () => reject(request.error);
-                        request.onsuccess = () => {
-                            this._indexedDB = request.result;
-                            console.log('IndexedDB initialized');
-                            resolve();
-                        };
-                        request.onupgradeneeded = (event) => {
-                            const db = event.target.result;
-                            if (!db.objectStoreNames.contains('memos')) {
-                                const store = db.createObjectStore('memos', { keyPath: 'id', autoIncrement: true });
-                                store.createIndex('key', 'key', { unique: true });
-                                store.createIndex('date', 'date', { unique: false });
-                            }
-                        };
-                    });
-                },
-                getMemoStorageKey() {
-                    return `memo_${this.selectedHospital}_${this.selectedDepartment}`;
-                },
-                loadLocalMemos() {
-                    const key = this.getMemoStorageKey();
-                    const stored = localStorage.getItem(key);
-                    return stored ? JSON.parse(stored) : {};
-                },
-                saveLocalMemos(memosObj) {
-                    const key = this.getMemoStorageKey();
-                    localStorage.setItem(key, JSON.stringify(memosObj));
-                },
-                updateAllMemosList() {
-                    const memosObj = this.loadLocalMemos();
-                    this.allMemosList = Object.entries(memosObj)
-                        .map(([date, content]) => ({ date, content }))
-                        .sort((a, b) => new Date(b.date) - new Date(a.date));
-                },
-                switchLanguage(lang) {
-                    this.currentLang = lang;
-                    localStorage.setItem('clinicNoteLang', lang);
-                    this.daysOfWeek = lang === 'ja' ? ['日', '月', '火', '水', '木', '金', '土'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                },
-                async loadClinics() {
-                    try {
-                        const API_URL = 'https://clinic-note-api.onrender.com';
-                        const authToken = localStorage.getItem('authToken');
-                        const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        const response = await fetch(`${API_URL}/api/clinics`, {
-                            headers: {
-                                'Authorization': `Bearer ${authToken}`,
-                                'X-Basic-Auth': basicAuthToken
-                            }
-                        });
-                        if (response.ok) {
-                            this.clinics = await response.json();
-                            this.hospitals = [...new Set(this.clinics.map(c => c.hospital_name))];
-                        }
-                    } catch (err) {
-                        console.error('Load clinics error:', err);
-                    }
-                },
-                onHospitalChange() {
-                    this.selectedDepartment = '';
-                    this.departments = this.clinics
-                        .filter(c => c.hospital_name === this.selectedHospital)
-                        .map(c => c.department);
-                },
-                async onDepartmentChange() {
-                    await this.loadAppointments();
+                    body: JSON.stringify({
+                        clinic_id: clinic.id,
+                        memo_date: dateStr,
+                        patient_memo: this.currentPatientMemo.trim() || null,
+                        doctor_memo: this.currentDoctorMemo.trim() || null
+                    })
+                });
+                
+                if (response.ok) {
                     await this.loadMemos();
+                    this.hasExistingMemo = true;
+                    this.successMessage = this.currentLang === 'ja' ? 'メモを保存しました' : 'Memo saved';
                     this.updateAllMemosList();
                     this.generateCalendar();
-                },
-                async loadAppointments() {
-                    try {
-                        const API_URL = 'https://clinic-note-api.onrender.com';
-                        const authToken = localStorage.getItem('authToken');
-                        const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
-                        if (!clinic) return;
-                        const response = await fetch(`${API_URL}/api/appointments?clinic_id=${clinic.id}`, {
-                            headers: {
-                                'Authorization': `Bearer ${authToken}`,
-                                'X-Basic-Auth': basicAuthToken
-                            }
-                        });
-                        if (response.ok) {
-                            this.appointments = await response.json();
+                }
+            } catch (err) {
+                this.errorMessage = this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed';
+                console.error('Save memo error:', err);
+            } finally {
+                this.loading = false;
+            }
+        },
+        clearMemo() {
+            this.currentPatientMemo = '';
+            this.currentDoctorMemo = '';
+        },
+        async deleteMemo() {
+            if (!this.selectedDate) return;
+            
+            const confirmMsg = this.currentLang === 'ja' ? 'このメモを削除しますか？' : 'Delete this memo?';
+            if (!confirm(confirmMsg)) return;
+            
+            this.loading = true;
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const dateStr = this.formatDate(this.selectedDate);
+                const memo = this.memos.find(m => m.memo_date === dateStr);
+                
+                if (memo) {
+                    const response = await fetch(`${API_URL}/api/appointments/memos/${memo.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'X-Basic-Auth': basicAuthToken
                         }
-                    } catch (err) {
-                        console.error('Load appointments error:', err);
-                    }
-                },
-                async loadMemos() {
-                    try {
-                        const API_URL = 'https://clinic-note-api.onrender.com';
-                        const authToken = localStorage.getItem('authToken');
-                        const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
-                        if (!clinic) return;
-                        const response = await fetch(`${API_URL}/api/appointments/memos?clinic_id=${clinic.id}`, {
-                            headers: {
-                                'Authorization': `Bearer ${authToken}`,
-                                'X-Basic-Auth': basicAuthToken
-                            }
-                        });
-                        if (response.ok) {
-                            this.memos = await response.json();
-                        }
-                    } catch (err) {
-                        console.error('Load memos error:', err);
-                    }
-                },
-                generateCalendar() {
-                    const year = this.currentDate.getFullYear();
-                    const month = this.currentDate.getMonth();
-                    this.currentMonthYear = `${year}年${month + 1}月`;
-                    if (this.currentLang === 'en') {
-                        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                        this.currentMonthYear = `${monthNames[month]} ${year}`;
-                    }
-                    const firstDay = new Date(year, month, 1);
-                    const lastDay = new Date(year, month + 1, 0);
-                    const prevLastDay = new Date(year, month, 0);
-                    const startDayOfWeek = firstDay.getDay();
-                    const daysInMonth = lastDay.getDate();
-                    const daysInPrevMonth = prevLastDay.getDate();
-                    this.calendarDates = [];
+                    });
                     
-                    const localMemos = this.loadLocalMemos();
-                    
-                    for (let i = startDayOfWeek - 1; i >= 0; i--) {
-                        const day = daysInPrevMonth - i;
-                        const date = new Date(year, month - 1, day);
-                        const dateStr = this.formatDate(date);
-                        this.calendarDates.push({
-                            key: `prev-${day}`,
-                            day: day,
-                            date: date,
-                            isCurrentMonth: false,
-                            isToday: false,
-                            hasAppointment: false,
-                            hasMemo: !!localMemos[dateStr]
-                        });
-                    }
-                    const today = new Date();
-                    for (let day = 1; day <= daysInMonth; day++) {
-                        const date = new Date(year, month, day);
-                        const dateStr = this.formatDate(date);
-                        const hasAppointment = this.appointments.some(a => a.appointment_date === dateStr);
-                        const hasMemo = !!localMemos[dateStr] || this.memos.some(m => m.memo_date === dateStr);
-                        const isToday = date.toDateString() === today.toDateString();
-                        this.calendarDates.push({
-                            key: `current-${day}`,
-                            day: day,
-                            date: date,
-                            isCurrentMonth: true,
-                            isToday: isToday,
-                            hasAppointment: hasAppointment,
-                            hasMemo: hasMemo
-                        });
-                    }
-                    const remainingDays = 42 - this.calendarDates.length;
-                    for (let day = 1; day <= remainingDays; day++) {
-                        const date = new Date(year, month + 1, day);
-                        const dateStr = this.formatDate(date);
-                        this.calendarDates.push({
-                            key: `next-${day}`,
-                            day: day,
-                            date: date,
-                            isCurrentMonth: false,
-                            isToday: false,
-                            hasAppointment: false,
-                            hasMemo: !!localMemos[dateStr]
-                        });
-                    }
-                },
-                previousMonth() {
-                    this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
-                    this.generateCalendar();
-                },
-                nextMonth() {
-                    this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
-                    this.generateCalendar();
-                },
-                async selectDate(dateObj) {
-                    this.selectedDate = dateObj.date;
-                    this.selectedDateFormatted = this.formatDateForDisplay(dateObj.date);
-                    const dateStr = this.formatDate(dateObj.date);
-                    
-                    const localMemos = this.loadLocalMemos();
-                    this.currentMemo = localMemos[dateStr] || '';
-                    this.hasExistingMemo = !!localMemos[dateStr];
-                    
-                    this.isAppointmentDay = this.appointments.some(a => a.appointment_date === dateStr);
-                    
-                    if (this.isAppointmentDay) {
-                        const allStoredMemos = Object.entries(localMemos)
-                            .filter(([date]) => date < dateStr)
-                            .map(([date, content]) => ({ date, content }))
-                            .sort((a, b) => new Date(b.date) - new Date(a.date))
-                            .slice(0, 10);
-                        this.previousMemos = allStoredMemos;
-                    } else {
-                        this.previousMemos = [];
-                    }
-                },
-                async saveMemo() {
-                    if (!this.selectedDate || !this.currentMemo.trim()) {
-                        this.errorMessage = this.currentLang === 'ja' ? 'メモを入力してください' : 'Please enter memo';
-                        return;
-                    }
-                    this.loading = true;
-                    try {
-                        const dateStr = this.formatDate(this.selectedDate);
-                        const localMemos = this.loadLocalMemos();
-                        localMemos[dateStr] = this.currentMemo.trim();
-                        this.saveLocalMemos(localMemos);
-                        
-                        if (this._memoDB) {
-                            const docId = `memo-${this.selectedHospital}-${this.selectedDepartment}-${dateStr}`;
-                            const doc = {
-                                _id: docId,
-                                date: dateStr,
-                                content: this.currentMemo.trim(),
-                                hospital: this.selectedHospital,
-                                department: this.selectedDepartment,
-                                created_at: new Date().toISOString()
-                            };
-                            try {
-                                await this._memoDB.put(doc);
-                            } catch (e) {
-                                if (e.status === 409) {
-                                    const old = await this._memoDB.get(docId);
-                                    doc._rev = old._rev;
-                                    await this._memoDB.put(doc);
-                                }
-                            }
-                        }
-                        
-                        if (this._indexedDB) {
-                            const transaction = this._indexedDB.transaction(['memos'], 'readwrite');
-                            const store = transaction.objectStore('memos');
-                            const key = `${this.selectedHospital}_${this.selectedDepartment}_${dateStr}`;
-                            
-                            const getRequest = store.index('key').get(key);
-                            getRequest.onsuccess = () => {
-                                const memoData = {
-                                    key: key,
-                                    date: dateStr,
-                                    content: this.currentMemo.trim(),
-                                    hospital: this.selectedHospital,
-                                    department: this.selectedDepartment,
-                                    updated_at: new Date().toISOString()
-                                };
-                                
-                                if (getRequest.result) {
-                                    memoData.id = getRequest.result.id;
-                                    store.put(memoData);
-                                } else {
-                                    store.add(memoData);
-                                }
-                            };
-                        }
-                        
-                        this.hasExistingMemo = true;
-                        this.successMessage = this.currentLang === 'ja' ? 'メモを保存しました' : 'Memo saved';
-                        this.updateAllMemosList();
-                        this.generateCalendar();
-                        
-                        setTimeout(() => {
-                            motion.animate('.memo-history-card', { scale: [1, 1.05, 1] }, { duration: 0.3 });
-                        }, 100);
-                        
-                    } catch (err) {
-                        this.errorMessage = this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed';
-                        console.error('Save memo error:', err);
-                    } finally {
-                        this.loading = false;
-                    }
-                },
-                clearMemo() {
-                    this.currentMemo = '';
-                },
-                async deleteMemo() {
-                    if (!this.selectedDate) return;
-                    
-                    const confirmMsg = this.currentLang === 'ja' ? 'このメモを削除しますか？' : 'Delete this memo?';
-                    if (!confirm(confirmMsg)) return;
-                    
-                    this.loading = true;
-                    try {
-                        const dateStr = this.formatDate(this.selectedDate);
-                        const localMemos = this.loadLocalMemos();
-                        delete localMemos[dateStr];
-                        this.saveLocalMemos(localMemos);
-                        
-                        if (this._memoDB) {
-                            const docId = `memo-${this.selectedHospital}-${this.selectedDepartment}-${dateStr}`;
-                            try {
-                                const doc = await this._memoDB.get(docId);
-                                await this._memoDB.remove(doc);
-                            } catch (e) {
-                                console.log('PouchDB delete: doc not found');
-                            }
-                        }
-                        
-                        if (this._indexedDB) {
-                            const transaction = this._indexedDB.transaction(['memos'], 'readwrite');
-                            const store = transaction.objectStore('memos');
-                            const key = `${this.selectedHospital}_${this.selectedDepartment}_${dateStr}`;
-                            const getRequest = store.index('key').get(key);
-                            getRequest.onsuccess = () => {
-                                if (getRequest.result) {
-                                    store.delete(getRequest.result.id);
-                                }
-                            };
-                        }
-                        
-                        this.currentMemo = '';
+                    if (response.ok) {
+                        await this.loadMemos();
+                        this.currentPatientMemo = '';
+                        this.currentDoctorMemo = '';
                         this.hasExistingMemo = false;
                         this.successMessage = this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted';
                         this.updateAllMemosList();
                         this.generateCalendar();
-                        
-                    } catch (err) {
-                        this.errorMessage = this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed';
-                        console.error('Delete memo error:', err);
-                    } finally {
-                        this.loading = false;
                     }
-                },
-                async deleteMemoByDate(dateStr) {
-                    const confirmMsg = this.currentLang === 'ja' ? 'このメモを削除しますか？' : 'Delete this memo?';
-                    if (!confirm(confirmMsg)) return;
+                }
+            } catch (err) {
+                this.errorMessage = this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed';
+                console.error('Delete memo error:', err);
+            } finally {
+                this.loading = false;
+            }
+        },
+        async deleteMemoByDate(dateStr) {
+            const confirmMsg = this.currentLang === 'ja' ? 'このメモを削除しますか？' : 'Delete this memo?';
+            if (!confirm(confirmMsg)) return;
+            
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const memo = this.memos.find(m => m.memo_date === dateStr);
+                
+                if (memo) {
+                    const response = await fetch(`${API_URL}/api/appointments/memos/${memo.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'X-Basic-Auth': basicAuthToken
+                        }
+                    });
                     
-                    try {
-                        const localMemos = this.loadLocalMemos();
-                        delete localMemos[dateStr];
-                        this.saveLocalMemos(localMemos);
-                        
-                        if (this._memoDB) {
-                            const docId = `memo-${this.selectedHospital}-${this.selectedDepartment}-${dateStr}`;
-                            try {
-                                const doc = await this._memoDB.get(docId);
-                                await this._memoDB.remove(doc);
-                            } catch (e) {
-                                console.log('PouchDB delete: doc not found');
-                            }
-                        }
-                        
-                        if (this._indexedDB) {
-                            const transaction = this._indexedDB.transaction(['memos'], 'readwrite');
-                            const store = transaction.objectStore('memos');
-                            const key = `${this.selectedHospital}_${this.selectedDepartment}_${dateStr}`;
-                            const getRequest = store.index('key').get(key);
-                            getRequest.onsuccess = () => {
-                                if (getRequest.result) {
-                                    store.delete(getRequest.result.id);
-                                }
-                            };
-                        }
-                        
+                    if (response.ok) {
+                        await this.loadMemos();
                         this.successMessage = this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted';
                         this.updateAllMemosList();
                         this.generateCalendar();
                         
                         if (this.selectedDate && this.formatDate(this.selectedDate) === dateStr) {
-                            this.currentMemo = '';
+                            this.currentPatientMemo = '';
+                            this.currentDoctorMemo = '';
                             this.hasExistingMemo = false;
                         }
-                        
-                    } catch (err) {
-                        this.errorMessage = this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed';
-                        console.error('Delete memo by date error:', err);
                     }
-                },
-                jumpToMemoDate(dateStr) {
-                    const date = new Date(dateStr);
-                    this.currentDate = new Date(date.getFullYear(), date.getMonth(), 1);
-                    this.generateCalendar();
+                }
+            } catch (err) {
+                this.errorMessage = this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed';
+                console.error('Delete memo by date error:', err);
+            }
+        },
+        jumpToMemoDate(dateStr) {
+            const date = new Date(dateStr);
+            this.currentDate = new Date(date.getFullYear(), date.getMonth(), 1);
+            this.generateCalendar();
+            
+            setTimeout(() => {
+                const dateObj = this.calendarDates.find(d => this.formatDate(d.date) === dateStr);
+                if (dateObj) {
+                    this.selectDate(dateObj);
+                    const memoSection = document.querySelector('[x-show="selectedDate"]');
+                    if (memoSection) {
+                        memoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }
+            }, 100);
+        },
+        isAppointmentDate(dateStr) {
+            return this.appointments.some(a => a.appointment_date === dateStr);
+        },
+        formatDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        },
+        formatDateForDisplay(date) {
+            if (this.currentLang === 'ja') {
+                return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+            }
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        },
+        formatMemoDate(dateStr) {
+            const date = new Date(dateStr);
+            return this.formatDateForDisplay(date);
+        },
+        getDaysAgo(dateStr) {
+            const date = new Date(dateStr);
+            const today = new Date();
+            const diffTime = Math.abs(today - date);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (this.currentLang === 'ja') {
+                return `${diffDays}日前`;
+            }
+            return `${diffDays} days ago`;
+        },
+        async exportData() {
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                
+                let queryParams = `clinic_id=${clinic.id}`;
+                if (this.exportStartDate) queryParams += `&start_date=${this.exportStartDate}`;
+                if (this.exportEndDate) queryParams += `&end_date=${this.exportEndDate}`;
+                
+                const response = await fetch(`${API_URL}/api/appointments/memos?${queryParams}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-Basic-Auth': basicAuthToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
                     
-                    setTimeout(() => {
-                        const dateObj = this.calendarDates.find(d => this.formatDate(d.date) === dateStr);
-                        if (dateObj) {
-                            this.selectDate(dateObj);
-                            
-                            const memoSection = document.querySelector('[x-show="selectedDate"]');
-                            if (memoSection) {
-                                memoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    if (this.exportFormat === 'json') {
+                        const jsonStr = JSON.stringify(data, null, 2);
+                        const blob = new Blob([jsonStr], { type: 'application/json' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `clinic-memos-${this.selectedHospital}-${this.selectedDepartment}-${new Date().toISOString().split('T')[0]}.json`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    } else if (this.exportFormat === 'csv') {
+                        let csv = 'Date,Hospital,Department,Patient Memo,Doctor Memo\n';
+                        data.forEach(memo => {
+                            csv += `"${memo.memo_date}","${memo.hospital_name}","${memo.department}","${(memo.patient_memo || '').replace(/"/g, '""')}","${(memo.doctor_memo || '').replace(/"/g, '""')}"\n`;
+                        });
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `clinic-memos-${this.selectedHospital}-${this.selectedDepartment}-${new Date().toISOString().split('T')[0]}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
+                    
+                    this.showExportDialog = false;
+                    this.successMessage = this.currentLang === 'ja' ? 'エクスポート完了' : 'Export completed';
+                }
+            } catch (err) {
+                this.errorMessage = this.currentLang === 'ja' ? 'エクスポート失敗' : 'Export failed';
+                console.error('Export error:', err);
+            }
+        },
+        handleFileSelect(event) {
+            this.selectedFile = event.target.files[0];
+        },
+        async importData() {
+            if (!this.selectedFile) return;
+            
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const content = e.target.result;
+                        let data;
+                        
+                        if (this.selectedFile.name.endsWith('.json')) {
+                            data = JSON.parse(content);
+                        } else if (this.selectedFile.name.endsWith('.csv')) {
+                            const lines = content.split('\n');
+                            data = [];
+                            for (let i = 1; i < lines.length; i++) {
+                                if (!lines[i].trim()) continue;
+                                const match = lines[i].match(/^"([^"]*)","([^"]*)","([^"]*)","([^"]*)","([^"]*)"$/);
+                                if (match) {
+                                    data.push({
+                                        memo_date: match[1],
+                                        hospital_name: match[2],
+                                        department: match[3],
+                                        patient_memo: match[4],
+                                        doctor_memo: match[5]
+                                    });
+                                }
                             }
                         }
-                    }, 100);
-                },
-                isAppointmentDate(dateStr) {
-                    return this.appointments.some(a => a.appointment_date === dateStr);
-                },
-                formatDate(date) {
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    return `${year}-${month}-${day}`;
-                },
-                formatDateForDisplay(date) {
-                    if (this.currentLang === 'ja') {
-                        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
-                    }
-                    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                },
-                formatMemoDate(dateStr) {
-                    const date = new Date(dateStr);
-                    return this.formatDateForDisplay(date);
-                },
-                getDaysAgo(dateStr) {
-                    const date = new Date(dateStr);
-                    const today = new Date();
-                    const diffTime = Math.abs(today - date);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    
-                    if (this.currentLang === 'ja') {
-                        return `${diffDays}日前`;
-                    }
-                    return `${diffDays} days ago`;
-                }
-            };
-        }
-        
-        document.addEventListener('alpine:init', () => {
-            Alpine.effect(async () => {
-                const root = document.querySelector('[x-data]');
-                if (!root || !root.__x) return;
-                const state = root.__x.$data;
-                if (!state.selectedHospital || !state.selectedDepartment) return;
-                
-                if (!state._memoDB) {
-                    state._memoDB = new PouchDB('clinic-note-memos');
-                }
-                
-                try {
-                    const result = await state._memoDB.allDocs({ include_docs: true });
-                    const localMemos = result.rows
-                        .map(r => r.doc)
-                        .filter(doc => 
-                            doc.hospital === state.selectedHospital && 
-                            doc.department === state.selectedDepartment
-                        );
-                    
-                    const memosObj = state.loadLocalMemos();
-                    localMemos.forEach(lm => {
-                        if (!memosObj[lm.date]) {
-                            memosObj[lm.date] = lm.content;
+                        
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                        
+                        for (const memo of data) {
+                            await fetch(`${API_URL}/api/appointments/memos`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'X-Basic-Auth': basicAuthToken
+                                },
+                                body: JSON.stringify({
+                                    clinic_id: clinic.id,
+                                    memo_date: memo.memo_date,
+                                    patient_memo: memo.patient_memo || null,
+                                    doctor_memo: memo.doctor_memo || null
+                                })
+                            });
                         }
+                        
+                        await this.loadMemos();
+                        this.updateAllMemosList();
+                        this.generateCalendar();
+                        this.showImportDialog = false;
+                        this.successMessage = this.currentLang === 'ja' ? 'インポート完了' : 'Import completed';
+                    } catch (err) {
+                        this.errorMessage = this.currentLang === 'ja' ? 'インポート失敗' : 'Import failed';
+                        console.error('Import parse error:', err);
+                    }
+                };
+                reader.readAsText(this.selectedFile);
+            } catch (err) {
+                this.errorMessage = this.currentLang === 'ja' ? 'ファイル読み込み失敗' : 'File read failed';
+                console.error('Import error:', err);
+            }
+        },
+        async printMemos() {
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                
+                let queryParams = `clinic_id=${clinic.id}`;
+                if (this.printStartDate) queryParams += `&start_date=${this.printStartDate}`;
+                if (this.printEndDate) queryParams += `&end_date=${this.printEndDate}`;
+                
+                const response = await fetch(`${API_URL}/api/appointments/memos?${queryParams}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-Basic-Auth': basicAuthToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const printArea = document.getElementById('printArea');
+                    
+                    let html = `
+                        <h1>${this.selectedHospital} - ${this.selectedDepartment}</h1>
+                        <h2>${this.currentLang === 'ja' ? 'メモ一覧' : 'Memo List'}</h2>
+                        <p>${this.currentLang === 'ja' ? '印刷日' : 'Printed on'}: ${new Date().toLocaleDateString()}</p>
+                        <hr>
+                    `;
+                    
+                    data.forEach(memo => {
+                        html += `
+                            <div style="margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px;">
+                                <h3>${memo.memo_date}</h3>
+                                ${memo.patient_memo ? `<p><strong>${this.currentLang === 'ja' ? '患者メモ' : 'Patient Memo'}:</strong> ${memo.patient_memo}</p>` : ''}
+                                ${memo.doctor_memo ? `<p><strong>${this.currentLang === 'ja' ? '医師診断メモ' : 'Doctor Diagnosis'}:</strong> ${memo.doctor_memo}</p>` : ''}
+                            </div>
+                        `;
                     });
-                    state.saveLocalMemos(memosObj);
-                    state.updateAllMemosList();
-                    state.generateCalendar();
-                } catch (err) {
-                    console.error('PouchDB sync error:', err);
+                    
+                    printArea.innerHTML = html;
+                    printArea.classList.remove('hidden');
+                    window.print();
+                    printArea.classList.add('hidden');
+                    this.showPrintDialog = false;
                 }
-            });
-        });
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            setTimeout(() => {
-                if (typeof motion !== 'undefined') {
-                    motion.animate('.all-memos-card', 
-                        { opacity: [0, 1], y: [20, 0] }, 
-                        { duration: 0.4, delay: motion.stagger(0.1) }
-                    );
+            } catch (err) {
+                this.errorMessage = this.currentLang === 'ja' ? '印刷失敗' : 'Print failed';
+                console.error('Print error:', err);
+            }
+        },
+        async sendEmail() {
+            if (!this.emailAddress) {
+                this.errorMessage = this.currentLang === 'ja' ? 'メールアドレスを入力してください' : 'Please enter email address';
+                return;
+            }
+            
+            try {
+                const API_URL = 'https://clinic-note-api.onrender.com';
+                const authToken = localStorage.getItem('authToken');
+                const basicAuthToken = localStorage.getItem('basicAuthToken');
+                const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+                
+                let queryParams = `clinic_id=${clinic.id}`;
+                if (this.emailStartDate) queryParams += `&start_date=${this.emailStartDate}`;
+                if (this.emailEndDate) queryParams += `&end_date=${this.emailEndDate}`;
+                
+                const response = await fetch(`${API_URL}/api/appointments/memos?${queryParams}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'X-Basic-Auth': basicAuthToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    let emailBody = `${this.selectedHospital} - ${this.selectedDepartment}\n\n`;
+                    data.forEach(memo => {
+                        emailBody += `Date: ${memo.memo_date}\n`;
+                        if (memo.patient_memo) emailBody += `Patient Memo: ${memo.patient_memo}\n`;
+                        if (memo.doctor_memo) emailBody += `Doctor Diagnosis: ${memo.doctor_memo}\n`;
+                        emailBody += '\n---\n\n';
+                    });
+                    
+                    const mailtoLink = `mailto:${this.emailAddress}?subject=Clinic%20Memos%20-%20${encodeURIComponent(this.selectedHospital)}&body=${encodeURIComponent(emailBody)}`;
+                    window.location.href = mailtoLink;
+                    
+                    this.showEmailDialog = false;
+                    this.successMessage = this.currentLang === 'ja' ? 'メールアプリを開きました' : 'Email app opened';
                 }
-            }, 1000);
-        });
+            } catch (err) {
+                this.errorMessage = this.currentLang === 'ja' ? 'メール送信失敗' : 'Email send failed';
+                console.error('Email error:', err);
+            }
+        }
+    };
+}
     </script>
     
     <style>
-        .line-clamp-3 {
+        .line-clamp-2 {
             display: -webkit-box;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
