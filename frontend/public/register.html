@@ -12,6 +12,16 @@
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <link rel="stylesheet" href="/custom.css">
+    <style>
+        sl-input::part(base), sl-textarea::part(base), sl-select::part(combobox) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-input::part(input), sl-textarea::part(textarea) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen flex items-center justify-center">
     <div x-data="registerData()" x-init="init()" class="w-full max-w-md px-4">
@@ -89,6 +99,20 @@
                     </sl-input>
                 </div>
 
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].timezone"></label>
+                    <sl-select 
+                        x-model="credentials.timezone" 
+                        :placeholder="translations[currentLang].timezonePlaceholder"
+                        size="large"
+                        required>
+                        <template x-for="tz in timezones" :key="tz.value">
+                            <sl-option :value="tz.value" x-text="tz.label"></sl-option>
+                        </template>
+                    </sl-select>
+                    <small class="text-gray-500" x-text="translations[currentLang].timezoneHint"></small>
+                </div>
+
                 <sl-button type="submit" variant="success" size="large" class="w-full" :loading="loading">
                     <span class="iconify mr-2" data-icon="mdi:account-plus"></span>
                     <span x-text="translations[currentLang].registerButton"></span>
@@ -117,7 +141,18 @@
                 loading: false,
                 error: '',
                 success: '',
-                credentials: { username: '', password: '', confirmPassword: '' },
+                credentials: { username: '', password: '', confirmPassword: '', timezone: 'Asia/Tokyo' },
+                timezones: [
+                    { value: 'Asia/Tokyo', label: 'Asia/Tokyo (UTC+9)' },
+                    { value: 'America/New_York', label: 'America/New_York (UTC-5)' },
+                    { value: 'America/Los_Angeles', label: 'America/Los_Angeles (UTC-8)' },
+                    { value: 'Europe/London', label: 'Europe/London (UTC+0)' },
+                    { value: 'Europe/Paris', label: 'Europe/Paris (UTC+1)' },
+                    { value: 'Asia/Shanghai', label: 'Asia/Shanghai (UTC+8)' },
+                    { value: 'Asia/Hong_Kong', label: 'Asia/Hong_Kong (UTC+8)' },
+                    { value: 'Asia/Seoul', label: 'Asia/Seoul (UTC+9)' },
+                    { value: 'Australia/Sydney', label: 'Australia/Sydney (UTC+11)' }
+                ],
                 translations: {
                     ja: {
                         title: '新規登録',
@@ -130,6 +165,9 @@
                         passwordHint: '8文字以上で入力してください',
                         confirmPassword: 'パスワード確認',
                         confirmPasswordPlaceholder: 'パスワードを再入力',
+                        timezone: 'タイムゾーン',
+                        timezonePlaceholder: 'タイムゾーンを選択',
+                        timezoneHint: 'お住まいの地域のタイムゾーンを選択してください',
                         registerButton: '登録する',
                         loginLink: 'すでにアカウントをお持ちの方はこちら',
                         backHome: 'ホームに戻る'
@@ -145,6 +183,9 @@
                         passwordHint: 'At least 8 characters',
                         confirmPassword: 'Confirm Password',
                         confirmPasswordPlaceholder: 'Re-enter password',
+                        timezone: 'Timezone',
+                        timezonePlaceholder: 'Select timezone',
+                        timezoneHint: 'Select your local timezone',
                         registerButton: 'Register',
                         loginLink: 'Already have an account? Login',
                         backHome: 'Back to Home'
@@ -154,6 +195,7 @@
                     const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
                     this.currentLang = savedLang;
                     AOS.init({ duration: 1000, once: true });
+                    this.credentials.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Tokyo';
                 },
                 switchLanguage(lang) {
                     this.currentLang = lang;
@@ -172,7 +214,7 @@
 
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
-                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken') || btoa('admin:ClinicNote');
                         
                         const response = await fetch(`${API_URL}/api/auth/register`, {
                             method: 'POST',
@@ -182,7 +224,8 @@
                             },
                             body: JSON.stringify({
                                 username: this.credentials.username,
-                                password: this.credentials.password
+                                password: this.credentials.password,
+                                timezone: this.credentials.timezone
                             })
                         });
 
