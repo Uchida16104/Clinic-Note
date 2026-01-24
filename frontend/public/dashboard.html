@@ -22,7 +22,17 @@
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
                 <h1 class="text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
-                <p class="text-gray-600 mt-2" x-text="translations[currentLang].subtitle"></p>
+                <p class="text-gray-600 mt-2">
+                    <span x-text="translations[currentLang].subtitle"></span>
+                    <sl-badge variant="success" pill x-show="syncStatus === 'synced'" class="ml-2">
+                        <span class="iconify mr-1" data-icon="mdi:cloud-check"></span>
+                        <span x-text="translations[currentLang].synced"></span>
+                    </sl-badge>
+                    <sl-badge variant="warning" pill x-show="syncStatus === 'syncing'" class="ml-2">
+                        <span class="iconify mr-1" data-icon="mdi:cloud-sync"></span>
+                        <span x-text="translations[currentLang].syncing"></span>
+                    </sl-badge>
+                </p>
             </div>
             <div class="flex gap-2">
                 <sl-button-group label="Language">
@@ -33,6 +43,9 @@
                         <span class="iconify" data-icon="twemoji:flag-united-states"></span>
                     </sl-button>
                 </sl-button-group>
+                <sl-button variant="neutral" @click="syncData()">
+                    <span class="iconify" data-icon="mdi:sync"></span>
+                </sl-button>
                 <sl-button variant="danger" @click="logout()">
                     <span class="iconify" data-icon="mdi:logout"></span>
                 </sl-button>
@@ -82,11 +95,11 @@
                                 <sl-badge variant="primary" x-text="clinic.department"></sl-badge>
                             </div>
                             <div class="space-y-2 text-sm">
-                                <div class="flex items-start">
+                                <div class="flex items-start" x-show="clinic.diagnosis">
                                     <span class="iconify text-red-500 mr-2 mt-1" data-icon="mdi:medical-bag"></span>
                                     <span class="text-gray-700" x-text="clinic.diagnosis"></span>
                                 </div>
-                                <div class="flex items-start">
+                                <div class="flex items-start" x-show="clinic.medication">
                                     <span class="iconify text-green-500 mr-2 mt-1" data-icon="mdi:pill"></span>
                                     <span class="text-gray-700" x-text="clinic.medication"></span>
                                 </div>
@@ -171,10 +184,14 @@
                 selectedClinic: null,
                 newClinic: { hospital_name: '', department: '', diagnosis: '', medication: '' },
                 newAppointment: { date: '', time: '' },
+                syncStatus: 'synced',
+                syncInterval: null,
                 translations: {
                     ja: {
                         title: 'ダッシュボード',
                         subtitle: 'あなたの通院管理',
+                        synced: '同期完了',
+                        syncing: '同期中',
                         calendar: 'カレンダー',
                         analytics: 'データ分析',
                         addClinic: '病院を追加',
@@ -197,6 +214,8 @@
                     en: {
                         title: 'Dashboard',
                         subtitle: 'Your Clinic Management',
+                        synced: 'Synced',
+                        syncing: 'Syncing',
                         calendar: 'Calendar',
                         analytics: 'Analytics',
                         addClinic: 'Add Clinic',
@@ -227,6 +246,7 @@
                     }
                     AOS.init({ duration: 1000, once: true });
                     await this.loadClinics();
+                    this.startAutoSync();
                 },
                 switchLanguage(lang) {
                     this.currentLang = lang;
@@ -269,6 +289,7 @@
                             await this.loadClinics();
                             this.showAddClinicDialog = false;
                             this.newClinic = { hospital_name: '', department: '', diagnosis: '', medication: '' };
+                            await this.syncData();
                         }
                     } catch (err) {
                         console.error('Add clinic error:', err);
@@ -291,6 +312,7 @@
                         });
                         if (response.ok) {
                             await this.loadClinics();
+                            await this.syncData();
                         }
                     } catch (err) {
                         console.error('Delete clinic error:', err);
@@ -322,6 +344,7 @@
                         if (response.ok) {
                             this.showAppointmentDialog = false;
                             this.newAppointment = { date: '', time: '' };
+                            await this.syncData();
                         }
                     } catch (err) {
                         console.error('Add appointment error:', err);
@@ -329,7 +352,23 @@
                         this.loading = false;
                     }
                 },
+                async syncData() {
+                    this.syncStatus = 'syncing';
+                    try {
+                        await this.loadClinics();
+                        this.syncStatus = 'synced';
+                    } catch (err) {
+                        console.error('Sync error:', err);
+                        this.syncStatus = 'synced';
+                    }
+                },
+                startAutoSync() {
+                    this.syncInterval = setInterval(() => {
+                        this.syncData();
+                    }, 300000);
+                },
                 logout() {
+                    if (this.syncInterval) clearInterval(this.syncInterval);
                     localStorage.removeItem('authToken');
                     localStorage.removeItem('userId');
                     window.location.href = '/login.html';
