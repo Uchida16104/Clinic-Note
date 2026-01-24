@@ -270,14 +270,17 @@ router.get('/past/list', async (req, res) => {
     }
 });
 
-// Get memos
+// Get memos (patient and doctor notes)
 router.get('/memos', async (req, res) => {
     try {
         const userId = req.user.userId;
         const clinicId = req.query.clinic_id;
+        const startDate = req.query.start_date;
+        const endDate = req.query.end_date;
 
         let queryText = `
-            SELECT m.id, m.clinic_id, m.memo_date, m.content, m.created_at, m.updated_at,
+            SELECT m.id, m.clinic_id, m.memo_date, m.patient_memo, m.doctor_memo, 
+                   m.created_at, m.updated_at,
                    c.hospital_name, c.department
             FROM memos m
             JOIN clinics c ON m.clinic_id = c.id
@@ -286,8 +289,18 @@ router.get('/memos', async (req, res) => {
         const params = [userId];
 
         if (clinicId) {
-            queryText += ' AND m.clinic_id = $2';
             params.push(clinicId);
+            queryText += ` AND m.clinic_id = $${params.length}`;
+        }
+
+        if (startDate) {
+            params.push(startDate);
+            queryText += ` AND m.memo_date >= $${params.length}`;
+        }
+
+        if (endDate) {
+            params.push(endDate);
+            queryText += ` AND m.memo_date <= $${params.length}`;
         }
 
         queryText += ' ORDER BY m.memo_date DESC';
@@ -309,7 +322,7 @@ router.get('/memos', async (req, res) => {
 router.post('/memos', async (req, res) => {
     try {
         const userId = req.user.userId;
-        const { clinic_id, memo_date, content } = req.body;
+        const { clinic_id, memo_date, patient_memo, doctor_memo } = req.body;
 
         // Validation
         if (!clinic_id || !memo_date) {
@@ -334,12 +347,15 @@ router.post('/memos', async (req, res) => {
 
         // Upsert memo
         const result = await query(
-            `INSERT INTO memos (user_id, clinic_id, memo_date, content) 
-             VALUES ($1, $2, $3, $4) 
+            `INSERT INTO memos (user_id, clinic_id, memo_date, patient_memo, doctor_memo) 
+             VALUES ($1, $2, $3, $4, $5) 
              ON CONFLICT (user_id, clinic_id, memo_date) 
-             DO UPDATE SET content = $4, updated_at = CURRENT_TIMESTAMP
-             RETURNING id, clinic_id, memo_date, content, created_at, updated_at`,
-            [userId, clinic_id, memo_date, content || '']
+             DO UPDATE SET 
+                patient_memo = COALESCE($4, memos.patient_memo),
+                doctor_memo = COALESCE($5, memos.doctor_memo),
+                updated_at = CURRENT_TIMESTAMP
+             RETURNING id, clinic_id, memo_date, patient_memo, doctor_memo, created_at, updated_at`,
+            [userId, clinic_id, memo_date, patient_memo || null, doctor_memo || null]
         );
 
         res.status(200).json({
