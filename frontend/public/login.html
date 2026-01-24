@@ -5,20 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clinic Note - ログイン</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
     <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
-    <link rel="stylesheet" href="../src/css/custom.css">
+    <link rel="stylesheet" href="/custom.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen flex items-center justify-center">
     <div x-data="loginData()" x-init="init()" class="w-full max-w-md px-4">
-        <!-- Language Switcher -->
         <div class="flex justify-end mb-4" data-aos="fade-down">
             <sl-button-group label="Language">
                 <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
@@ -30,7 +26,6 @@
             </sl-button-group>
         </div>
 
-        <!-- Login Card -->
         <div class="bg-white rounded-2xl shadow-2xl p-8" data-aos="zoom-in">
             <div class="text-center mb-8">
                 <span class="iconify text-6xl text-indigo-600 mb-4" data-icon="mdi:account-circle"></span>
@@ -38,7 +33,6 @@
                 <p class="text-gray-600 mt-2" x-text="translations[currentLang].subtitle"></p>
             </div>
 
-            <!-- BASIC Auth Form (Initial) -->
             <form x-show="!basicAuthPassed" @submit.prevent="handleBasicAuth" class="space-y-6">
                 <sl-alert variant="primary" open>
                     <span class="iconify slot-icon" data-icon="mdi:information"></span>
@@ -47,25 +41,14 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].basicUser"></label>
-                    <sl-input 
-                        x-model="basicAuth.username" 
-                        type="text" 
-                        :placeholder="translations[currentLang].basicUserPlaceholder"
-                        required
-                        size="large">
+                    <sl-input x-model="basicAuth.username" type="text" :placeholder="translations[currentLang].basicUserPlaceholder" required size="large">
                         <span slot="prefix" class="iconify" data-icon="mdi:account"></span>
                     </sl-input>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].basicPass"></label>
-                    <sl-input 
-                        x-model="basicAuth.password" 
-                        type="password" 
-                        :placeholder="translations[currentLang].basicPassPlaceholder"
-                        required
-                        size="large"
-                        password-toggle>
+                    <sl-input x-model="basicAuth.password" type="password" :placeholder="translations[currentLang].basicPassPlaceholder" required size="large" password-toggle>
                         <span slot="prefix" class="iconify" data-icon="mdi:lock"></span>
                     </sl-input>
                 </div>
@@ -76,7 +59,6 @@
                 </sl-button>
             </form>
 
-            <!-- User Login Form -->
             <form x-show="basicAuthPassed" @submit.prevent="handleLogin" class="space-y-6">
                 <sl-alert x-show="error" variant="danger" :open="error !== ''" closable @sl-after-hide="error = ''">
                     <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
@@ -90,25 +72,14 @@
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].username"></label>
-                    <sl-input 
-                        x-model="credentials.username" 
-                        type="text" 
-                        :placeholder="translations[currentLang].usernamePlaceholder"
-                        required
-                        size="large">
+                    <sl-input x-model="credentials.username" type="text" :placeholder="translations[currentLang].usernamePlaceholder" required size="large">
                         <span slot="prefix" class="iconify" data-icon="mdi:account"></span>
                     </sl-input>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-2" x-text="translations[currentLang].password"></label>
-                    <sl-input 
-                        x-model="credentials.password" 
-                        type="password" 
-                        :placeholder="translations[currentLang].passwordPlaceholder"
-                        required
-                        size="large"
-                        password-toggle>
+                    <sl-input x-model="credentials.password" type="password" :placeholder="translations[currentLang].passwordPlaceholder" required size="large" password-toggle>
                         <span slot="prefix" class="iconify" data-icon="mdi:lock"></span>
                     </sl-input>
                 </div>
@@ -134,7 +105,6 @@
         </div>
     </div>
 
-    <script src="../src/js/auth.js"></script>
     <script>
         function loginData() {
             return {
@@ -151,9 +121,9 @@
                         subtitle: 'アカウントにアクセス',
                         basicAuthInfo: '初回アクセス時はBASIC認証が必要です',
                         basicUser: 'BASIC ユーザー名',
-                        basicUserPlaceholder: 'BASIC_USER を入力',
+                        basicUserPlaceholder: 'admin を入力',
                         basicPass: 'BASIC パスワード',
-                        basicPassPlaceholder: 'BASIC_PASSWORD を入力',
+                        basicPassPlaceholder: 'ClinicNote を入力',
                         basicAuthButton: 'BASIC認証',
                         username: 'ユーザー名',
                         usernamePlaceholder: 'ユーザー名を入力',
@@ -168,9 +138,9 @@
                         subtitle: 'Access your account',
                         basicAuthInfo: 'BASIC authentication required for initial access',
                         basicUser: 'BASIC Username',
-                        basicUserPlaceholder: 'Enter BASIC_USER',
+                        basicUserPlaceholder: 'Enter admin',
                         basicPass: 'BASIC Password',
-                        basicPassPlaceholder: 'Enter BASIC_PASSWORD',
+                        basicPassPlaceholder: 'Enter ClinicNote',
                         basicAuthButton: 'BASIC Auth',
                         username: 'Username',
                         usernamePlaceholder: 'Enter username',
@@ -204,7 +174,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Basic ${basicAuthToken}`
+                                'X-Basic-Auth': basicAuthToken
                             }
                         });
                         if (response.ok) {
@@ -230,7 +200,7 @@
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
-                                'Authorization': `Basic ${basicAuthToken}`
+                                'X-Basic-Auth': basicAuthToken
                             },
                             body: JSON.stringify(this.credentials)
                         });
@@ -254,5 +224,6 @@
             };
         }
     </script>
+    <script src="/sync-utility.js"></script>
 </body>
 </html>

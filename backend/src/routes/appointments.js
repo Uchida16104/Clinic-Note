@@ -1,4 +1,4 @@
-// Clinic Note - Appointments Routes
+// Clinic Note - Appointments Routes (完全版)
 const express = require('express');
 const router = express.Router();
 const { query } = require('../db/database');
@@ -270,7 +270,7 @@ router.get('/past/list', async (req, res) => {
     }
 });
 
-// Get memos
+// Get memos (個人の症状メモ)
 router.get('/memos', async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -305,7 +305,7 @@ router.get('/memos', async (req, res) => {
     }
 });
 
-// Create or update memo
+// Create or update memo (個人の症状メモ)
 router.post('/memos', async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -385,6 +385,129 @@ router.delete('/memos/:id', async (req, res) => {
 
     } catch (err) {
         console.error('Delete memo error:', err);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: err.message
+        });
+    }
+});
+
+// Get doctor memos (医師の診察結果メモ)
+router.get('/doctor-memos', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const clinicId = req.query.clinic_id;
+
+        let queryText = `
+            SELECT dm.id, dm.clinic_id, dm.memo_date, dm.doctor_notes, dm.diagnosis_notes, 
+                   dm.prescription_notes, dm.created_at, dm.updated_at,
+                   c.hospital_name, c.department
+            FROM doctor_memos dm
+            JOIN clinics c ON dm.clinic_id = c.id
+            WHERE dm.user_id = $1
+        `;
+        const params = [userId];
+
+        if (clinicId) {
+            queryText += ' AND dm.clinic_id = $2';
+            params.push(clinicId);
+        }
+
+        queryText += ' ORDER BY dm.memo_date DESC';
+
+        const result = await query(queryText, params);
+
+        res.status(200).json(result.rows);
+
+    } catch (err) {
+        console.error('Get doctor memos error:', err);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: err.message
+        });
+    }
+});
+
+// Create or update doctor memo (医師の診察結果メモ)
+router.post('/doctor-memos', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { clinic_id, memo_date, doctor_notes, diagnosis_notes, prescription_notes } = req.body;
+
+        // Validation
+        if (!clinic_id || !memo_date) {
+            return res.status(400).json({
+                error: 'Validation error',
+                message: 'Clinic ID and memo date are required'
+            });
+        }
+
+        // Verify clinic belongs to user
+        const clinicResult = await query(
+            'SELECT id FROM clinics WHERE id = $1 AND user_id = $2',
+            [clinic_id, userId]
+        );
+
+        if (clinicResult.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Not found',
+                message: 'Clinic not found'
+            });
+        }
+
+        // Upsert doctor memo
+        const result = await query(
+            `INSERT INTO doctor_memos (user_id, clinic_id, memo_date, doctor_notes, diagnosis_notes, prescription_notes) 
+             VALUES ($1, $2, $3, $4, $5, $6) 
+             ON CONFLICT (user_id, clinic_id, memo_date) 
+             DO UPDATE SET doctor_notes = $4, diagnosis_notes = $5, prescription_notes = $6, updated_at = CURRENT_TIMESTAMP
+             RETURNING id, clinic_id, memo_date, doctor_notes, diagnosis_notes, prescription_notes, created_at, updated_at`,
+            [userId, clinic_id, memo_date, doctor_notes || '', diagnosis_notes || '', prescription_notes || '']
+        );
+
+        res.status(200).json({
+            message: 'Doctor memo saved successfully',
+            doctorMemo: result.rows[0]
+        });
+
+    } catch (err) {
+        console.error('Save doctor memo error:', err);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: err.message
+        });
+    }
+});
+
+// Delete doctor memo
+router.delete('/doctor-memos/:id', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const doctorMemoId = req.params.id;
+
+        const checkResult = await query(
+            'SELECT id FROM doctor_memos WHERE id = $1 AND user_id = $2',
+            [doctorMemoId, userId]
+        );
+
+        if (checkResult.rows.length === 0) {
+            return res.status(404).json({
+                error: 'Not found',
+                message: 'Doctor memo not found'
+            });
+        }
+
+        await query(
+            'DELETE FROM doctor_memos WHERE id = $1 AND user_id = $2',
+            [doctorMemoId, userId]
+        );
+
+        res.status(200).json({
+            message: 'Doctor memo deleted successfully'
+        });
+
+    } catch (err) {
+        console.error('Delete doctor memo error:', err);
         res.status(500).json({
             error: 'Internal server error',
             message: err.message

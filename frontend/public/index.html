@@ -18,7 +18,7 @@
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/motion@10.16.4/dist/motion.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
-    <link rel="stylesheet" href="../src/css/custom.css">
+    <link rel="stylesheet" href="/custom.css">
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="appData()" x-init="init()" class="container mx-auto px-4 py-8">
@@ -36,7 +36,6 @@
 
         <!-- Hero Section -->
         <div class="text-center mb-12" data-aos="fade-up">
-            <div id="lottie-medical" class="w-64 h-64 mx-auto mb-6"></div>
             <h1 class="text-5xl font-bold text-indigo-900 mb-4" x-text="translations[currentLang].welcome"></h1>
             <p class="text-xl text-gray-700 mb-8" x-text="translations[currentLang].subtitle"></p>
         </div>
@@ -100,7 +99,7 @@
         </div>
     </div>
 
-    <script src="../src/js/app.js"></script>
+    <script src="/app.js"></script>
     <script>
         function appData() {
             return {
@@ -173,5 +172,6 @@
             };
         }
     </script>
+    <script src="/sync-utility.js"></script>
 </body>
 </html>

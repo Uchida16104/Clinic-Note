@@ -1,3 +1,5 @@
+<img src="./Clinic_Note.png" />
+
 # Clinic Note - Medical Appointment Management System
 
 ## Overview
@@ -286,6 +288,12 @@ CREATE TABLE memos (
 ### Datadog (Optional Monitoring)
 - **Datadog API Key**: `your_datadog_api_key`
 - **Datadog Region**: `US1`
+
+### BASIC Authentication
+
+| User | Password |
+| --- | --- |
+| **admin** | **ClinicNote** |
 
 ## Installation Steps
 
