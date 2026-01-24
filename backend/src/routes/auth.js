@@ -25,10 +25,10 @@ router.post('/basic', basicAuthMiddleware, async (req, res) => {
     }
 });
 
-// Register new user
+// Register new user with timezone
 router.post('/register', basicAuthMiddleware, async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const { username, password, timezone } = req.body;
 
         // Validation
         if (!username || !password) {
@@ -69,10 +69,10 @@ router.post('/register', basicAuthMiddleware, async (req, res) => {
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // Insert user
+        // Insert user with timezone
         const result = await query(
-            'INSERT INTO users (username, password_hash) VALUES ($1, $2) RETURNING id, username, created_at',
-            [username, passwordHash]
+            'INSERT INTO users (username, password_hash, timezone) VALUES ($1, $2, $3) RETURNING id, username, timezone, created_at',
+            [username, passwordHash, timezone || 'Asia/Tokyo']
         );
 
         const newUser = result.rows[0];
@@ -82,6 +82,7 @@ router.post('/register', basicAuthMiddleware, async (req, res) => {
             user: {
                 id: newUser.id,
                 username: newUser.username,
+                timezone: newUser.timezone,
                 created_at: newUser.created_at
             }
         });
@@ -110,7 +111,7 @@ router.post('/login', basicAuthMiddleware, async (req, res) => {
 
         // Find user
         const result = await query(
-            'SELECT id, username, password_hash FROM users WHERE username = $1',
+            'SELECT id, username, password_hash, timezone FROM users WHERE username = $1',
             [username]
         );
 
@@ -135,7 +136,7 @@ router.post('/login', basicAuthMiddleware, async (req, res) => {
 
         // Generate JWT token
         const token = jwt.sign(
-            { userId: user.id, username: user.username },
+            { userId: user.id, username: user.username, timezone: user.timezone },
             JWT_SECRET,
             { expiresIn: JWT_EXPIRES_IN }
         );
@@ -144,7 +145,8 @@ router.post('/login', basicAuthMiddleware, async (req, res) => {
             message: 'Login successful',
             token: token,
             userId: user.id,
-            username: user.username
+            username: user.username,
+            timezone: user.timezone
         });
 
     } catch (err) {
@@ -175,7 +177,7 @@ router.get('/verify', basicAuthMiddleware, async (req, res) => {
             
             // Check if user still exists
             const result = await query(
-                'SELECT id, username FROM users WHERE id = $1',
+                'SELECT id, username, timezone FROM users WHERE id = $1',
                 [decoded.userId]
             );
 
@@ -190,7 +192,8 @@ router.get('/verify', basicAuthMiddleware, async (req, res) => {
                 valid: true,
                 user: {
                     id: result.rows[0].id,
-                    username: result.rows[0].username
+                    username: result.rows[0].username,
+                    timezone: result.rows[0].timezone
                 }
             });
 
@@ -203,6 +206,38 @@ router.get('/verify', basicAuthMiddleware, async (req, res) => {
 
     } catch (err) {
         console.error('Verify token error:', err);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: err.message
+        });
+    }
+});
+
+// Update timezone
+router.put('/timezone', verifyToken, async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { timezone } = req.body;
+
+        if (!timezone) {
+            return res.status(400).json({
+                error: 'Validation error',
+                message: 'Timezone is required'
+            });
+        }
+
+        await query(
+            'UPDATE users SET timezone = $1 WHERE id = $2',
+            [timezone, userId]
+        );
+
+        res.status(200).json({
+            message: 'Timezone updated successfully',
+            timezone: timezone
+        });
+
+    } catch (err) {
+        console.error('Update timezone error:', err);
         res.status(500).json({
             error: 'Internal server error',
             message: err.message
