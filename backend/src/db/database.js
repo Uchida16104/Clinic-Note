@@ -29,12 +29,13 @@ async function initDatabase() {
     try {
         console.log('Initializing database schema...');
 
-        // Create users table
+        // Create users table with timezone
         await client.query(`
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
                 password_hash VARCHAR(255) NOT NULL,
+                timezone VARCHAR(100) DEFAULT 'Asia/Tokyo',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -71,14 +72,15 @@ async function initDatabase() {
         `);
         console.log('✓ Appointments table created/verified');
 
-        // Create memos table
+        // Create memos table (patients notes and doctors diagnosis)
         await client.query(`
             CREATE TABLE IF NOT EXISTS memos (
                 id SERIAL PRIMARY KEY,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 clinic_id INTEGER NOT NULL REFERENCES clinics(id) ON DELETE CASCADE,
                 memo_date DATE NOT NULL,
-                content TEXT,
+                patient_memo TEXT,
+                doctor_memo TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(user_id, clinic_id, memo_date)
@@ -87,27 +89,13 @@ async function initDatabase() {
         console.log('✓ Memos table created/verified');
 
         // Create indexes for better performance
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_clinics_user_id ON clinics(user_id)
-        `);
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_appointments_user_id ON appointments(user_id)
-        `);
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_appointments_clinic_id ON appointments(clinic_id)
-        `);
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date)
-        `);
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_memos_user_id ON memos(user_id)
-        `);
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_memos_clinic_id ON memos(clinic_id)
-        `);
-        await client.query(`
-            CREATE INDEX IF NOT EXISTS idx_memos_date ON memos(memo_date)
-        `);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_clinics_user_id ON clinics(user_id)`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_appointments_user_id ON appointments(user_id)`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_appointments_clinic_id ON appointments(clinic_id)`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date)`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_memos_user_id ON memos(user_id)`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_memos_clinic_id ON memos(clinic_id)`);
+        await client.query(`CREATE INDEX IF NOT EXISTS idx_memos_date ON memos(memo_date)`);
         console.log('✓ Indexes created/verified');
 
         // Create updated_at trigger function
@@ -124,9 +112,7 @@ async function initDatabase() {
         // Create triggers for updated_at
         const tables = ['users', 'clinics', 'appointments', 'memos'];
         for (const table of tables) {
-            await client.query(`
-                DROP TRIGGER IF EXISTS update_${table}_updated_at ON ${table}
-            `);
+            await client.query(`DROP TRIGGER IF EXISTS update_${table}_updated_at ON ${table}`);
             await client.query(`
                 CREATE TRIGGER update_${table}_updated_at
                 BEFORE UPDATE ON ${table}
