@@ -12,15 +12,65 @@
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="/custom.css">
+    <style>
+        sl-card {
+            background-color: #ffffff !important;
+        }
+        
+        sl-card::part(base) {
+            background-color: #ffffff !important;
+        }
+        
+        .bg-white, .bg-white * {
+            background-color: #ffffff !important;
+        }
+        
+        .card-body {
+            background-color: #ffffff !important;
+        }
+        
+        h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
+            color: #1f2937 !important;
+        }
+        
+        .text-gray-600, .text-gray-700, .text-gray-800, .text-indigo-900 {
+            color: #1f2937 !important;
+        }
+        
+        .text-blue-500, .text-green-500, .text-purple-500 {
+            color: inherit !important;
+        }
+        
+        sl-card .text-3xl,
+        sl-card .text-2xl,
+        sl-card .text-lg,
+        sl-card div,
+        sl-card p,
+        sl-card span,
+        sl-card strong {
+            color: #1f2937 !important;
+        }
+        
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+        }
+        
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 300px;
+            }
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="analyticsData()" x-init="init()" class="container mx-auto px-4 py-8">
         <!-- Header -->
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
-                <h1 class="text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
-                <p class="text-gray-600 mt-2" x-text="translations[currentLang].subtitle"></p>
+                <h1 class="text-4xl font-bold" x-text="translations[currentLang].title"></h1>
+                <p class="mt-2" x-text="translations[currentLang].subtitle"></p>
             </div>
             <div class="flex gap-2">
                 <sl-button-group label="Language">
@@ -40,30 +90,30 @@
         <!-- Loading State -->
         <div x-show="loading" class="text-center py-12">
             <sl-spinner style="font-size: 3rem;"></sl-spinner>
-            <p class="mt-4 text-gray-600" x-text="translations[currentLang].loading"></p>
+            <p class="mt-4" x-text="translations[currentLang].loading"></p>
         </div>
 
         <!-- Statistics Cards -->
         <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-aos="fade-up">
             <sl-card>
-                <div class="text-center p-4">
-                    <span class="iconify text-5xl text-blue-500 mb-3" data-icon="mdi:hospital-building"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalClinics"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalClinics"></div>
+                <div class="text-center p-4 card-body">
+                    <span class="iconify text-5xl mb-3" data-icon="mdi:hospital-building" style="color: #3b82f6;"></span>
+                    <div class="text-3xl font-bold" x-text="stats.totalClinics"></div>
+                    <div class="mt-2" x-text="translations[currentLang].totalClinics"></div>
                 </div>
             </sl-card>
             <sl-card>
-                <div class="text-center p-4">
-                    <span class="iconify text-5xl text-green-500 mb-3" data-icon="mdi:calendar-check"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalAppointments"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalAppointments"></div>
+                <div class="text-center p-4 card-body">
+                    <span class="iconify text-5xl mb-3" data-icon="mdi:calendar-check" style="color: #10b981;"></span>
+                    <div class="text-3xl font-bold" x-text="stats.totalAppointments"></div>
+                    <div class="mt-2" x-text="translations[currentLang].totalAppointments"></div>
                 </div>
             </sl-card>
             <sl-card>
-                <div class="text-center p-4">
-                    <span class="iconify text-5xl text-purple-500 mb-3" data-icon="mdi:note-multiple"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalMemos"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalMemos"></div>
+                <div class="text-center p-4 card-body">
+                    <span class="iconify text-5xl mb-3" data-icon="mdi:note-multiple" style="color: #a855f7;"></span>
+                    <div class="text-3xl font-bold" x-text="stats.totalMemos"></div>
+                    <div class="mt-2" x-text="translations[currentLang].totalMemos"></div>
                 </div>
             </sl-card>
         </div>
@@ -73,47 +123,53 @@
             <!-- Appointments by Department -->
             <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="200">
                 <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-bar"></span>
+                    <span class="iconify mr-2" data-icon="mdi:chart-bar" style="color: #6366f1;"></span>
                     <span x-text="translations[currentLang].appointmentsByDept"></span>
                 </h2>
-                <canvas id="departmentChart"></canvas>
+                <div class="chart-container">
+                    <canvas id="departmentChart"></canvas>
+                </div>
             </div>
 
             <!-- Appointment Frequency -->
             <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="400">
                 <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-line"></span>
+                    <span class="iconify mr-2" data-icon="mdi:chart-line" style="color: #6366f1;"></span>
                     <span x-text="translations[currentLang].appointmentFrequency"></span>
                 </h2>
-                <canvas id="frequencyChart"></canvas>
+                <div class="chart-container">
+                    <canvas id="frequencyChart"></canvas>
+                </div>
             </div>
 
-            <!-- Department Analysis -->
+            <!-- Department Distribution -->
             <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="600">
                 <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-pie"></span>
+                    <span class="iconify mr-2" data-icon="mdi:chart-pie" style="color: #6366f1;"></span>
                     <span x-text="translations[currentLang].departmentDistribution"></span>
                 </h2>
-                <canvas id="pieChart"></canvas>
+                <div class="chart-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
             </div>
 
             <!-- Trends Analysis -->
             <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="800">
                 <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="iconify text-indigo-600 mr-2" data-icon="mdi:trending-up"></span>
+                    <span class="iconify mr-2" data-icon="mdi:trending-up" style="color: #6366f1;"></span>
                     <span x-text="translations[currentLang].trends"></span>
                 </h2>
                 <div class="space-y-4">
                     <template x-for="trend in trends" :key="trend.department">
                         <sl-card>
-                            <div class="p-4">
+                            <div class="p-4 card-body">
                                 <div class="flex justify-between items-center mb-2">
                                     <h3 class="text-lg font-bold" x-text="trend.department"></h3>
                                     <sl-badge :variant="trend.trend === 'increasing' ? 'danger' : trend.trend === 'stable' ? 'primary' : 'success'">
                                         <span x-text="translations[currentLang][trend.trend]"></span>
                                     </sl-badge>
                                 </div>
-                                <div class="text-gray-600">
+                                <div>
                                     <p><strong x-text="translations[currentLang].visitCount"></strong>: <span x-text="trend.count"></span></p>
                                     <p><strong x-text="translations[currentLang].avgInterval"></strong>: <span x-text="trend.avgInterval"></span> <span x-text="translations[currentLang].days"></span></p>
                                     <p class="mt-2" x-text="trend.analysis"></p>
@@ -125,7 +181,6 @@
             </div>
         </div>
     </div>
-
     <script src="/analytics.js"></script>
     <script>
         function analyticsData() {
@@ -138,6 +193,7 @@
                     totalMemos: 0
                 },
                 trends: [],
+                chartData: null,
                 charts: {},
                 translations: {
                     ja: {
@@ -185,11 +241,19 @@
                         window.location.href = '/login.html';
                         return;
                     }
+                    
+                    if (!localStorage.getItem('basicAuthToken')) {
+                        localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
+                    }
+                    
                     AOS.init({ duration: 1000, once: true });
                     await this.loadAnalytics();
                     this.loading = false;
+                    
                     this.$nextTick(() => {
-                        this.createCharts();
+                        setTimeout(() => {
+                            this.createCharts();
+                        }, 100);
                     });
                 },
                 switchLanguage(lang) {
@@ -213,96 +277,175 @@
                             this.stats = data.stats;
                             this.trends = data.trends;
                             this.chartData = data.chartData;
+                            console.log('Analytics data loaded:', data);
+                        } else {
+                            console.error('Failed to load analytics:', response.status);
                         }
                     } catch (err) {
                         console.error('Load analytics error:', err);
                     }
                 },
+                destroyCharts() {
+                    // 既存のチャートを破棄
+                    if (this.charts.department) {
+                        this.charts.department.destroy();
+                        this.charts.department = null;
+                    }
+                    if (this.charts.frequency) {
+                        this.charts.frequency.destroy();
+                        this.charts.frequency = null;
+                    }
+                    if (this.charts.pie) {
+                        this.charts.pie.destroy();
+                        this.charts.pie = null;
+                    }
+                },
                 createCharts() {
-                    if (!this.chartData) return;
+                    if (!this.chartData || !this.chartData.departments || this.chartData.departments.length === 0) {
+                        console.warn('No chart data available');
+                        return;
+                    }
                     
+                    this.destroyCharts();
+                    
+                    console.log('Creating charts with data:', this.chartData);
+                    
+                    // Department Bar Chart
                     const ctx1 = document.getElementById('departmentChart');
                     if (ctx1) {
-                        this.charts.department = new Chart(ctx1, {
-                            type: 'bar',
-                            data: {
-                                labels: this.chartData.departments,
-                                datasets: [{
-                                    label: this.translations[this.currentLang].totalAppointments,
-                                    data: this.chartData.departmentCounts,
-                                    backgroundColor: 'rgba(99, 102, 241, 0.7)',
-                                    borderColor: 'rgba(99, 102, 241, 1)',
-                                    borderWidth: 2
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: true,
-                                plugins: {
-                                    legend: { display: true }
+                        try {
+                            this.charts.department = new Chart(ctx1, {
+                                type: 'bar',
+                                data: {
+                                    labels: this.chartData.departments,
+                                    datasets: [{
+                                        label: this.translations[this.currentLang].totalAppointments,
+                                        data: this.chartData.departmentCounts,
+                                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
+                                        borderColor: 'rgba(99, 102, 241, 1)',
+                                        borderWidth: 2
+                                    }]
                                 },
-                                scales: {
-                                    y: { beginAtZero: true }
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { 
+                                            display: true,
+                                            labels: {
+                                                color: '#1f2937'
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        y: { 
+                                            beginAtZero: true,
+                                            ticks: {
+                                                color: '#1f2937'
+                                            }
+                                        },
+                                        x: {
+                                            ticks: {
+                                                color: '#1f2937'
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                        });
+                            });
+                            console.log('Department chart created');
+                        } catch (err) {
+                            console.error('Department chart error:', err);
+                        }
                     }
 
+                    // Frequency Line Chart
                     const ctx2 = document.getElementById('frequencyChart');
                     if (ctx2) {
-                        this.charts.frequency = new Chart(ctx2, {
-                            type: 'line',
-                            data: {
-                                labels: this.chartData.months,
-                                datasets: [{
-                                    label: this.translations[this.currentLang].totalAppointments,
-                                    data: this.chartData.monthlyCounts,
-                                    borderColor: 'rgba(34, 197, 94, 1)',
-                                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                                    tension: 0.4,
-                                    fill: true
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: true,
-                                plugins: {
-                                    legend: { display: true }
+                        try {
+                            this.charts.frequency = new Chart(ctx2, {
+                                type: 'line',
+                                data: {
+                                    labels: this.chartData.months,
+                                    datasets: [{
+                                        label: this.translations[this.currentLang].totalAppointments,
+                                        data: this.chartData.monthlyCounts,
+                                        borderColor: 'rgba(34, 197, 94, 1)',
+                                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                        tension: 0.4,
+                                        fill: true
+                                    }]
                                 },
-                                scales: {
-                                    y: { beginAtZero: true }
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { 
+                                            display: true,
+                                            labels: {
+                                                color: '#1f2937'
+                                            }
+                                        }
+                                    },
+                                    scales: {
+                                        y: { 
+                                            beginAtZero: true,
+                                            ticks: {
+                                                color: '#1f2937'
+                                            }
+                                        },
+                                        x: {
+                                            ticks: {
+                                                color: '#1f2937'
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                        });
+                            });
+                            console.log('Frequency chart created');
+                        } catch (err) {
+                            console.error('Frequency chart error:', err);
+                        }
                     }
 
+                    // Department Pie Chart
                     const ctx3 = document.getElementById('pieChart');
                     if (ctx3) {
-                        this.charts.pie = new Chart(ctx3, {
-                            type: 'pie',
-                            data: {
-                                labels: this.chartData.departments,
-                                datasets: [{
-                                    data: this.chartData.departmentCounts,
-                                    backgroundColor: [
-                                        'rgba(99, 102, 241, 0.7)',
-                                        'rgba(34, 197, 94, 0.7)',
-                                        'rgba(168, 85, 247, 0.7)',
-                                        'rgba(251, 146, 60, 0.7)',
-                                        'rgba(236, 72, 153, 0.7)',
-                                        'rgba(59, 130, 246, 0.7)'
-                                    ],
-                                    borderWidth: 2
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: true,
-                                plugins: {
-                                    legend: { position: 'right' }
+                        try {
+                            this.charts.pie = new Chart(ctx3, {
+                                type: 'pie',
+                                data: {
+                                    labels: this.chartData.departments,
+                                    datasets: [{
+                                        data: this.chartData.departmentCounts,
+                                        backgroundColor: [
+                                            'rgba(99, 102, 241, 0.7)',
+                                            'rgba(34, 197, 94, 0.7)',
+                                            'rgba(168, 85, 247, 0.7)',
+                                            'rgba(251, 146, 60, 0.7)',
+                                            'rgba(236, 72, 153, 0.7)',
+                                            'rgba(59, 130, 246, 0.7)'
+                                        ],
+                                        borderColor: '#ffffff',
+                                        borderWidth: 2
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { 
+                                            position: 'right',
+                                            labels: {
+                                                color: '#1f2937'
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                        });
+                            });
+                            console.log('Pie chart created');
+                        } catch (err) {
+                            console.error('Pie chart error:', err);
+                        }
                     }
                 },
                 updateCharts() {
