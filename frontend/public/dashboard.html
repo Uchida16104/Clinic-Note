@@ -11,32 +11,39 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
-    <link rel="stylesheet" href="/custom.css">
     <style>
         sl-input::part(base), 
         sl-textarea::part(base), 
-        sl-select::part(combobox),
+        sl-select::part(combobox) {
+            background-color: #ffffff !important;
+            border: 1px solid #d1d5db !important;
+        }
+        
         sl-input::part(input), 
-        sl-textarea::part(textarea) {
+        sl-textarea::part(textarea),
+        sl-select::part(display-input) {
             background-color: #ffffff !important;
             color: #1f2937 !important;
         }
         
         sl-card {
             background-color: #ffffff !important;
-            color: #1f2937 !important;
         }
         
-        .bg-white {
+        sl-card::part(base) {
             background-color: #ffffff !important;
         }
         
-        .text-gray-600, .text-gray-700, .text-gray-800, .text-indigo-900 {
-            color: #374151 !important;
+        .bg-white, .bg-white * {
+            background-color: #ffffff !important;
         }
         
-        h1, h2, h3, h4, h5, h6 {
-            color: #1e293b !important;
+        h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
+            color: #1f2937 !important;
+        }
+        
+        .text-gray-600, .text-gray-700, .text-gray-800, .text-indigo-900 {
+            color: #1f2937 !important;
         }
     </style>
 </head>
@@ -46,7 +53,7 @@
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
                 <h1 class="text-4xl font-bold" x-text="translations[currentLang].title"></h1>
-                <p class="text-gray-600 mt-2">
+                <p class="mt-2">
                     <span x-text="translations[currentLang].subtitle"></span>
                     <sl-badge variant="success" pill x-show="syncStatus === 'synced'" class="ml-2">
                         <span class="iconify mr-1" data-icon="mdi:cloud-check"></span>
@@ -121,11 +128,11 @@
                             <div class="space-y-2 text-sm">
                                 <div class="flex items-start" x-show="clinic.diagnosis">
                                     <span class="iconify text-red-500 mr-2 mt-1" data-icon="mdi:medical-bag"></span>
-                                    <span class="text-gray-700" x-text="clinic.diagnosis"></span>
+                                    <span x-text="clinic.diagnosis"></span>
                                 </div>
                                 <div class="flex items-start" x-show="clinic.medication">
                                     <span class="iconify text-green-500 mr-2 mt-1" data-icon="mdi:pill"></span>
-                                    <span class="text-gray-700" x-text="clinic.medication"></span>
+                                    <span x-text="clinic.medication"></span>
                                 </div>
                             </div>
                             <div class="mt-4 flex gap-2">
@@ -187,8 +194,7 @@
                 <sl-input 
                     type="time" 
                     x-model="newAppointment.time" 
-                    :label="translations[currentLang].appointmentTime"
-                    required>
+                    :label="translations[currentLang].appointmentTime">
                 </sl-input>
                 <sl-button type="submit" variant="success" class="w-full" :loading="loading">
                     <span x-text="translations[currentLang].save"></span>
@@ -382,7 +388,7 @@
                             body: JSON.stringify({
                                 clinic_id: this.selectedClinic.id,
                                 appointment_date: this.newAppointment.date,
-                                appointment_time: this.newAppointment.time
+                                appointment_time: this.newAppointment.time || null
                             })
                         });
                         if (response.ok) {
@@ -393,7 +399,8 @@
                                 this.showAppointmentDialog = false;
                             }, 2000);
                         } else {
-                            this.appointmentError = this.currentLang === 'ja' ? '追加に失敗しました' : 'Failed to add';
+                            const errorData = await response.json();
+                            this.appointmentError = errorData.message || (this.currentLang === 'ja' ? '追加に失敗しました' : 'Failed to add');
                         }
                     } catch (err) {
                         console.error('Add appointment error:', err);
