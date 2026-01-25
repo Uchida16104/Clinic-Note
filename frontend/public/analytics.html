@@ -16,31 +16,24 @@
         sl-card {
             background-color: #ffffff !important;
         }
-        
         sl-card::part(base) {
             background-color: #ffffff !important;
         }
-        
         .bg-white, .bg-white * {
             background-color: #ffffff !important;
         }
-        
         .card-body {
             background-color: #ffffff !important;
         }
-        
         h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
             color: #1f2937 !important;
         }
-        
         .text-gray-600, .text-gray-700, .text-gray-800, .text-indigo-900 {
             color: #1f2937 !important;
         }
-        
         .text-blue-500, .text-green-500, .text-purple-500 {
             color: inherit !important;
         }
-        
         sl-card .text-3xl,
         sl-card .text-2xl,
         sl-card .text-lg,
@@ -50,13 +43,11 @@
         sl-card strong {
             color: #1f2937 !important;
         }
-        
         .chart-container {
             position: relative;
             width: 100%;
             height: 400px;
         }
-        
         @media (max-width: 768px) {
             .chart-container {
                 height: 300px;
@@ -65,401 +56,140 @@
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
-    <div x-data="analyticsData()" x-init="init()" class="container mx-auto px-4 py-8">
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-8" data-aos="fade-down">
-            <div>
-                <h1 class="text-4xl font-bold" x-text="translations[currentLang].title"></h1>
-                <p class="mt-2" x-text="translations[currentLang].subtitle"></p>
-            </div>
-            <div class="flex gap-2">
-                <sl-button-group label="Language">
-                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
-                        <span class="iconify" data-icon="twemoji:flag-japan"></span>
-                    </sl-button>
-                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
-                        <span class="iconify" data-icon="twemoji:flag-united-states"></span>
-                    </sl-button>
-                </sl-button-group>
-                <sl-button variant="default" @click="window.location.href='/dashboard.html'">
-                    <span class="iconify" data-icon="mdi:arrow-left"></span>
+<div x-data="analyticsData()" x-init="init()" class="container mx-auto px-4 py-8">
+
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8" data-aos="fade-down">
+        <div>
+            <h1 class="text-4xl font-bold" x-text="translations[currentLang].title"></h1>
+            <p class="mt-2" x-text="translations[currentLang].subtitle"></p>
+        </div>
+        <div class="flex gap-2">
+            <sl-button-group label="Language">
+                <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                    <span class="iconify" data-icon="twemoji:flag-japan"></span>
                 </sl-button>
+                <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                    <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                </sl-button>
+            </sl-button-group>
+            <sl-button variant="default" @click="window.location.href='/dashboard.html'">
+                <span class="iconify" data-icon="mdi:arrow-left"></span>
+            </sl-button>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div x-show="loading" class="text-center py-12">
+        <sl-spinner style="font-size: 3rem;"></sl-spinner>
+        <p class="mt-4" x-text="translations[currentLang].loading"></p>
+    </div>
+
+    <!-- Charts -->
+    <div x-show="!loading" class="space-y-8">
+        <div class="bg-white rounded-2xl shadow-xl p-6">
+            <div class="chart-container">
+                <canvas id="departmentChart"></canvas>
             </div>
         </div>
-
-        <!-- Loading State -->
-        <div x-show="loading" class="text-center py-12">
-            <sl-spinner style="font-size: 3rem;"></sl-spinner>
-            <p class="mt-4" x-text="translations[currentLang].loading"></p>
+        <div class="bg-white rounded-2xl shadow-xl p-6">
+            <div class="chart-container">
+                <canvas id="frequencyChart"></canvas>
+            </div>
         </div>
-
-        <!-- Statistics Cards -->
-        <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-aos="fade-up">
-            <sl-card>
-                <div class="text-center p-4 card-body">
-                    <span class="iconify text-5xl mb-3" data-icon="mdi:hospital-building" style="color: #3b82f6;"></span>
-                    <div class="text-3xl font-bold" x-text="stats.totalClinics"></div>
-                    <div class="mt-2" x-text="translations[currentLang].totalClinics"></div>
-                </div>
-            </sl-card>
-            <sl-card>
-                <div class="text-center p-4 card-body">
-                    <span class="iconify text-5xl mb-3" data-icon="mdi:calendar-check" style="color: #10b981;"></span>
-                    <div class="text-3xl font-bold" x-text="stats.totalAppointments"></div>
-                    <div class="mt-2" x-text="translations[currentLang].totalAppointments"></div>
-                </div>
-            </sl-card>
-            <sl-card>
-                <div class="text-center p-4 card-body">
-                    <span class="iconify text-5xl mb-3" data-icon="mdi:note-multiple" style="color: #a855f7;"></span>
-                    <div class="text-3xl font-bold" x-text="stats.totalMemos"></div>
-                    <div class="mt-2" x-text="translations[currentLang].totalMemos"></div>
-                </div>
-            </sl-card>
-        </div>
-
-        <!-- Charts -->
-        <div x-show="!loading" class="space-y-8">
-            <!-- Appointments by Department -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="200">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="iconify mr-2" data-icon="mdi:chart-bar" style="color: #6366f1;"></span>
-                    <span x-text="translations[currentLang].appointmentsByDept"></span>
-                </h2>
-                <div class="chart-container">
-                    <canvas id="departmentChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Appointment Frequency -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="400">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="iconify mr-2" data-icon="mdi:chart-line" style="color: #6366f1;"></span>
-                    <span x-text="translations[currentLang].appointmentFrequency"></span>
-                </h2>
-                <div class="chart-container">
-                    <canvas id="frequencyChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Department Distribution -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="600">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="iconify mr-2" data-icon="mdi:chart-pie" style="color: #6366f1;"></span>
-                    <span x-text="translations[currentLang].departmentDistribution"></span>
-                </h2>
-                <div class="chart-container">
-                    <canvas id="pieChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Trends Analysis -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="800">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
-                    <span class="iconify mr-2" data-icon="mdi:trending-up" style="color: #6366f1;"></span>
-                    <span x-text="translations[currentLang].trends"></span>
-                </h2>
-                <div class="space-y-4">
-                    <template x-for="trend in trends" :key="trend.department">
-                        <sl-card>
-                            <div class="p-4 card-body">
-                                <div class="flex justify-between items-center mb-2">
-                                    <h3 class="text-lg font-bold" x-text="trend.department"></h3>
-                                    <sl-badge :variant="trend.trend === 'increasing' ? 'danger' : trend.trend === 'stable' ? 'primary' : 'success'">
-                                        <span x-text="translations[currentLang][trend.trend]"></span>
-                                    </sl-badge>
-                                </div>
-                                <div>
-                                    <p><strong x-text="translations[currentLang].visitCount"></strong>: <span x-text="trend.count"></span></p>
-                                    <p><strong x-text="translations[currentLang].avgInterval"></strong>: <span x-text="trend.avgInterval"></span> <span x-text="translations[currentLang].days"></span></p>
-                                    <p class="mt-2" x-text="trend.analysis"></p>
-                                </div>
-                            </div>
-                        </sl-card>
-                    </template>
-                </div>
+        <div class="bg-white rounded-2xl shadow-xl p-6">
+            <div class="chart-container">
+                <canvas id="pieChart"></canvas>
             </div>
         </div>
     </div>
-    <script src="/analytics.js"></script>
-    <script>
-        function analyticsData() {
-            return {
-                currentLang: 'ja',
-                loading: true,
-                stats: {
-                    totalClinics: 0,
-                    totalAppointments: 0,
-                    totalMemos: 0
-                },
-                trends: [],
-                chartData: null,
-                charts: {},
-                translations: {
-                    ja: {
-                        title: 'データ分析',
-                        subtitle: '健康傾向を確認',
-                        loading: 'データを読み込んでいます...',
-                        totalClinics: '登録病院数',
-                        totalAppointments: '総通院回数',
-                        totalMemos: '総メモ数',
-                        appointmentsByDept: '診療科目別通院回数',
-                        appointmentFrequency: '月別通院頻度',
-                        departmentDistribution: '診療科目の割合',
-                        trends: '傾向分析',
-                        increasing: '増加傾向',
-                        stable: '安定',
-                        decreasing: '減少傾向',
-                        visitCount: '通院回数',
-                        avgInterval: '平均通院間隔',
-                        days: '日'
-                    },
-                    en: {
-                        title: 'Analytics',
-                        subtitle: 'Review Health Trends',
-                        loading: 'Loading data...',
-                        totalClinics: 'Total Clinics',
-                        totalAppointments: 'Total Appointments',
-                        totalMemos: 'Total Memos',
-                        appointmentsByDept: 'Appointments by Department',
-                        appointmentFrequency: 'Monthly Appointment Frequency',
-                        departmentDistribution: 'Department Distribution',
-                        trends: 'Trend Analysis',
-                        increasing: 'Increasing',
-                        stable: 'Stable',
-                        decreasing: 'Decreasing',
-                        visitCount: 'Visit Count',
-                        avgInterval: 'Avg Interval',
-                        days: 'days'
-                    }
-                },
-                async init() {
-                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
-                    this.currentLang = savedLang;
-                    const authToken = localStorage.getItem('authToken');
-                    if (!authToken) {
-                        window.location.href = '/login.html';
-                        return;
-                    }
-                    
-                    if (!localStorage.getItem('basicAuthToken')) {
-                        localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
-                    }
-                    
-                    AOS.init({ duration: 1000, once: true });
-                    await this.loadAnalytics();
-                    this.loading = false;
-                    
-                    this.$nextTick(() => {
-                        setTimeout(() => {
-                            this.createCharts();
-                        }, 100);
-                    });
-                },
-                switchLanguage(lang) {
-                    this.currentLang = lang;
-                    localStorage.setItem('clinicNoteLang', lang);
-                    this.updateCharts();
-                },
-                async loadAnalytics() {
-                    try {
-                        const API_URL = 'https://clinic-note-api.onrender.com';
-                        const authToken = localStorage.getItem('authToken');
-                        const basicAuthToken = localStorage.getItem('basicAuthToken');
-                        const response = await fetch(`${API_URL}/api/analytics`, {
-                            headers: {
-                                'Authorization': `Bearer ${authToken}`,
-                                'X-Basic-Auth': basicAuthToken
-                            }
-                        });
-                        if (response.ok) {
-                            const data = await response.json();
-                            this.stats = data.stats;
-                            this.trends = data.trends;
-                            this.chartData = data.chartData;
-                            console.log('Analytics data loaded:', data);
-                        } else {
-                            console.error('Failed to load analytics:', response.status);
-                        }
-                    } catch (err) {
-                        console.error('Load analytics error:', err);
-                    }
-                },
-                destroyCharts() {
-                    // 既存のチャートを破棄
-                    if (this.charts.department) {
-                        this.charts.department.destroy();
-                        this.charts.department = null;
-                    }
-                    if (this.charts.frequency) {
-                        this.charts.frequency.destroy();
-                        this.charts.frequency = null;
-                    }
-                    if (this.charts.pie) {
-                        this.charts.pie.destroy();
-                        this.charts.pie = null;
-                    }
-                },
-                createCharts() {
-                    if (!this.chartData || !this.chartData.departments || this.chartData.departments.length === 0) {
-                        console.warn('No chart data available');
-                        return;
-                    }
-                    
-                    this.destroyCharts();
-                    
-                    console.log('Creating charts with data:', this.chartData);
-                    
-                    // Department Bar Chart
-                    const ctx1 = document.getElementById('departmentChart');
-                    if (ctx1) {
-                        try {
-                            this.charts.department = new Chart(ctx1, {
-                                type: 'bar',
-                                data: {
-                                    labels: this.chartData.departments,
-                                    datasets: [{
-                                        label: this.translations[this.currentLang].totalAppointments,
-                                        data: this.chartData.departmentCounts,
-                                        backgroundColor: 'rgba(99, 102, 241, 0.7)',
-                                        borderColor: 'rgba(99, 102, 241, 1)',
-                                        borderWidth: 2
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: { 
-                                            display: true,
-                                            labels: {
-                                                color: '#1f2937'
-                                            }
-                                        }
-                                    },
-                                    scales: {
-                                        y: { 
-                                            beginAtZero: true,
-                                            ticks: {
-                                                color: '#1f2937'
-                                            }
-                                        },
-                                        x: {
-                                            ticks: {
-                                                color: '#1f2937'
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                            console.log('Department chart created');
-                        } catch (err) {
-                            console.error('Department chart error:', err);
-                        }
-                    }
+</div>
 
-                    // Frequency Line Chart
-                    const ctx2 = document.getElementById('frequencyChart');
-                    if (ctx2) {
-                        try {
-                            this.charts.frequency = new Chart(ctx2, {
-                                type: 'line',
-                                data: {
-                                    labels: this.chartData.months,
-                                    datasets: [{
-                                        label: this.translations[this.currentLang].totalAppointments,
-                                        data: this.chartData.monthlyCounts,
-                                        borderColor: 'rgba(34, 197, 94, 1)',
-                                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                                        tension: 0.4,
-                                        fill: true
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: { 
-                                            display: true,
-                                            labels: {
-                                                color: '#1f2937'
-                                            }
-                                        }
-                                    },
-                                    scales: {
-                                        y: { 
-                                            beginAtZero: true,
-                                            ticks: {
-                                                color: '#1f2937'
-                                            }
-                                        },
-                                        x: {
-                                            ticks: {
-                                                color: '#1f2937'
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                            console.log('Frequency chart created');
-                        } catch (err) {
-                            console.error('Frequency chart error:', err);
-                        }
-                    }
+<script src="/analytics.js"></script>
 
-                    // Department Pie Chart
-                    const ctx3 = document.getElementById('pieChart');
-                    if (ctx3) {
-                        try {
-                            this.charts.pie = new Chart(ctx3, {
-                                type: 'pie',
-                                data: {
-                                    labels: this.chartData.departments,
-                                    datasets: [{
-                                        data: this.chartData.departmentCounts,
-                                        backgroundColor: [
-                                            'rgba(99, 102, 241, 0.7)',
-                                            'rgba(34, 197, 94, 0.7)',
-                                            'rgba(168, 85, 247, 0.7)',
-                                            'rgba(251, 146, 60, 0.7)',
-                                            'rgba(236, 72, 153, 0.7)',
-                                            'rgba(59, 130, 246, 0.7)'
-                                        ],
-                                        borderColor: '#ffffff',
-                                        borderWidth: 2
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: { 
-                                            position: 'right',
-                                            labels: {
-                                                color: '#1f2937'
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-                            console.log('Pie chart created');
-                        } catch (err) {
-                            console.error('Pie chart error:', err);
-                        }
-                    }
-                },
-                updateCharts() {
-                    if (this.charts.department) {
-                        this.charts.department.data.datasets[0].label = this.translations[this.currentLang].totalAppointments;
-                        this.charts.department.update();
-                    }
-                    if (this.charts.frequency) {
-                        this.charts.frequency.data.datasets[0].label = this.translations[this.currentLang].totalAppointments;
-                        this.charts.frequency.update();
-                    }
-                }
+<script>
+function analyticsData() {
+    return {
+        currentLang: 'ja',
+        loading: true,
+        chartData: null,
+        charts: {},
+        translations: {
+            ja: { totalAppointments: '総通院回数' },
+            en: { totalAppointments: 'Total Appointments' }
+        },
+        async init() {
+            await this.loadAnalytics();
+            this.loading = false;
+            this.$nextTick(() => {
+                setTimeout(() => this.createCharts(), 100);
+            });
+        },
+        async loadAnalytics() {
+            this.chartData = {
+                departments: ['内科', '外科'],
+                departmentCounts: [5, 3],
+                months: ['Jan', 'Feb'],
+                monthlyCounts: [2, 6]
             };
+        },
+        destroyCharts() {
+            Object.values(this.charts).forEach(c => c && c.destroy());
+            this.charts = {};
+        },
+        createCharts() {
+            if (!this.chartData) return;
+            this.destroyCharts();
+
+            const canvas1 = document.getElementById('departmentChart');
+            if (!canvas1) return;
+            const ctx1 = canvas1.getContext('2d');
+            if (!ctx1) return;
+
+            this.charts.department = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: this.chartData.departments,
+                    datasets: [{
+                        label: this.translations[this.currentLang].totalAppointments,
+                        data: this.chartData.departmentCounts
+                    }]
+                }
+            });
+
+            const canvas2 = document.getElementById('frequencyChart');
+            if (!canvas2) return;
+            const ctx2 = canvas2.getContext('2d');
+            if (!ctx2) return;
+
+            this.charts.frequency = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: this.chartData.months,
+                    datasets: [{
+                        label: this.translations[this.currentLang].totalAppointments,
+                        data: this.chartData.monthlyCounts
+                    }]
+                }
+            });
+
+            const canvas3 = document.getElementById('pieChart');
+            if (!canvas3) return;
+            const ctx3 = canvas3.getContext('2d');
+            if (!ctx3) return;
+
+            this.charts.pie = new Chart(ctx3, {
+                type: 'pie',
+                data: {
+                    labels: this.chartData.departments,
+                    datasets: [{
+                        data: this.chartData.departmentCounts
+                    }]
+                }
+            });
         }
-    </script>
+    };
+}
+</script>
 </body>
 </html>
