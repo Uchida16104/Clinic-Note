@@ -232,8 +232,8 @@ sl-badge {
     left: 50%;
     transform: translateX(-50%);
     padding: 0.5rem 1rem;
-    background: #1e293b;
-    color: white;
+    background: white;
+    color: #1e293b;
     border-radius: 0.5rem;
     font-size: 0.875rem;
     white-space: nowrap;
