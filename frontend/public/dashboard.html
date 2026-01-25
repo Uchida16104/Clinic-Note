@@ -5,23 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clinic Note - ダッシュボード</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
-    <script src="https://unpkg.com/hyperscript.org@0.9.12"></script>
     <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pouchdb@8.0.1/dist/pouchdb.min.js"></script>
     <link rel="stylesheet" href="/custom.css">
+    <style>
+        sl-input::part(base), 
+        sl-textarea::part(base), 
+        sl-select::part(combobox),
+        sl-input::part(input), 
+        sl-textarea::part(textarea) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        
+        sl-card {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        
+        .bg-white {
+            background-color: #ffffff !important;
+        }
+        
+        .text-gray-600, .text-gray-700, .text-gray-800, .text-indigo-900 {
+            color: #374151 !important;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            color: #1e293b !important;
+        }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="dashboardData()" x-init="init()" class="container mx-auto px-4 py-8">
         <!-- Header -->
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
-                <h1 class="text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
+                <h1 class="text-4xl font-bold" x-text="translations[currentLang].title"></h1>
                 <p class="text-gray-600 mt-2">
                     <span x-text="translations[currentLang].subtitle"></span>
                     <sl-badge variant="success" pill x-show="syncStatus === 'synced'" class="ml-2">
@@ -91,7 +115,7 @@
                     <sl-card>
                         <div class="p-4">
                             <div class="flex justify-between items-start mb-3">
-                                <h3 class="text-lg font-bold text-indigo-900" x-text="clinic.hospital_name"></h3>
+                                <h3 class="text-lg font-bold" x-text="clinic.hospital_name"></h3>
                                 <sl-badge variant="primary" x-text="clinic.department"></sl-badge>
                             </div>
                             <div class="space-y-2 text-sm">
@@ -170,6 +194,15 @@
                     <span x-text="translations[currentLang].save"></span>
                 </sl-button>
             </form>
+            
+            <sl-alert x-show="appointmentSuccess" variant="success" :open="appointmentSuccess !== ''" closable @sl-after-hide="appointmentSuccess = ''" class="mt-4">
+                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                <span x-text="appointmentSuccess"></span>
+            </sl-alert>
+            <sl-alert x-show="appointmentError" variant="danger" :open="appointmentError !== ''" closable @sl-after-hide="appointmentError = ''" class="mt-4">
+                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
+                <span x-text="appointmentError"></span>
+            </sl-alert>
         </sl-dialog>
     </div>
 
@@ -186,6 +219,8 @@
                 newAppointment: { date: '', time: '' },
                 syncStatus: 'synced',
                 syncInterval: null,
+                appointmentSuccess: '',
+                appointmentError: '',
                 translations: {
                     ja: {
                         title: 'ダッシュボード',
@@ -244,6 +279,11 @@
                         window.location.href = '/login.html';
                         return;
                     }
+                    
+                    if (!localStorage.getItem('basicAuthToken')) {
+                        localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
+                    }
+                    
                     AOS.init({ duration: 1000, once: true });
                     await this.loadClinics();
                     this.startAutoSync();
@@ -321,9 +361,13 @@
                 selectClinicForAppointment(clinic) {
                     this.selectedClinic = clinic;
                     this.showAppointmentDialog = true;
+                    this.appointmentSuccess = '';
+                    this.appointmentError = '';
                 },
                 async addAppointment() {
                     this.loading = true;
+                    this.appointmentSuccess = '';
+                    this.appointmentError = '';
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
@@ -342,12 +386,18 @@
                             })
                         });
                         if (response.ok) {
-                            this.showAppointmentDialog = false;
+                            this.appointmentSuccess = this.currentLang === 'ja' ? '通院日を追加しました' : 'Appointment added';
                             this.newAppointment = { date: '', time: '' };
                             await this.syncData();
+                            setTimeout(() => {
+                                this.showAppointmentDialog = false;
+                            }, 2000);
+                        } else {
+                            this.appointmentError = this.currentLang === 'ja' ? '追加に失敗しました' : 'Failed to add';
                         }
                     } catch (err) {
                         console.error('Add appointment error:', err);
+                        this.appointmentError = this.currentLang === 'ja' ? '追加に失敗しました' : 'Failed to add';
                     } finally {
                         this.loading = false;
                     }
