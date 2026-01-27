@@ -59,6 +59,20 @@
             background-color: #ffffff !important;
             color: #1f2937 !important;
         }
+
+        sl-select::part(listbox) {
+            background-color: #ffffff !important;
+        }
+
+
+        sl-option::part(base) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+
+        sl-option:hover::part(base) {
+            background-color: #f3f4f6 !important;
+        }
         
         sl-card {
             background-color: #ffffff !important;
@@ -779,15 +793,21 @@ function calendarData() {
         },
         
         onHospitalChange() {
+            this.selectedHospital = event.target.value;
             this.selectedDepartment = '';
             this.departments = this.clinics
                 .filter(c => c.hospital_name === this.selectedHospital)
                 .map(c => c.department);
+            const departmentSelect = document.getElementById('departmentSelect');
+            if (departmentSelect) {
+                departmentSelect.value = '';
+            }
             this.currentClinicId = null;
             console.log('Hospital changed:', this.selectedHospital, 'Departments:', this.departments.length);
         },
         
         async onDepartmentChange() {
+            this.selectedDepartment = event.target.value;
             const clinic = this.clinics.find(c => 
                 c.hospital_name === this.selectedHospital && 
                 c.department === this.selectedDepartment
