@@ -57,6 +57,77 @@
             .grid-cols-7 { gap: 0.25rem; }
             .aspect-square { font-size: 0.75rem; }
         }
+        
+        .line-clamp-none {
+            display: block;
+            -webkit-line-clamp: unset;
+            -webkit-box-orient: unset;
+            overflow: visible;
+        }
+        
+        .memo-content {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: none;
+            overflow: visible;
+        }
+        
+        .memo-history-card {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+            border-left: 4px solid #f59e0b !important;
+        }
+        
+        .all-memos-card {
+            transition: all 0.3s ease;
+        }
+        
+        .all-memos-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .icon-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .icon-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .icon-button-save {
+            background-color: #10b981;
+            color: white;
+        }
+        
+        .icon-button-save:hover {
+            background-color: #059669;
+        }
+        
+        .icon-button-clear {
+            background-color: #6b7280;
+            color: white;
+        }
+        
+        .icon-button-clear:hover {
+            background-color: #4b5563;
+        }
+        
+        .icon-button-delete {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .icon-button-delete:hover {
+            background-color: #dc2626;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
@@ -177,6 +248,16 @@
                 <span x-text="translations[currentLang].memo + ' - ' + selectedDateFormatted"></span>
             </h2>
 
+            <!-- Success/Error Messages -->
+            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''" class="mb-4">
+                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                <span x-text="successMessage"></span>
+            </sl-alert>
+            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''" class="mb-4">
+                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
+                <span x-text="errorMessage"></span>
+            </sl-alert>
+
             <!-- Appointment Alert -->
             <sl-alert x-show="isAppointmentDay" variant="success" open class="mb-4">
                 <span class="iconify slot-icon" data-icon="mdi:calendar-alert"></span>
@@ -199,7 +280,7 @@
                                         <span x-text="getDaysAgo(memo.memo_date)"></span>
                                     </sl-badge>
                                 </div>
-                                <div class="whitespace-pre-wrap">
+                                <div class="memo-content line-clamp-none">
                                     <div class="mb-2" x-show="memo.patient_memo">
                                         <strong x-text="translations[currentLang].patientMemo + ':'"></strong>
                                         <div x-text="memo.patient_memo"></div>
@@ -221,7 +302,7 @@
                 <sl-textarea
                     x-model="currentPatientMemo"
                     :placeholder="translations[currentLang].patientMemoPlaceholder"
-                    rows="4"
+                    rows="5"
                     resize="auto">
                 </sl-textarea>
             </div>
@@ -232,35 +313,28 @@
                 <sl-textarea
                     x-model="currentDoctorMemo"
                     :placeholder="translations[currentLang].doctorMemoPlaceholder"
-                    rows="4"
+                    rows="5"
                     resize="auto">
                 </sl-textarea>
             </div>
 
-            <div class="mt-4 flex gap-2">
-                <sl-button variant="primary" @click="saveMemo()" :loading="loading">
-                    <span class="iconify mr-2" data-icon="mdi:content-save"></span>
-                    <span x-text="translations[currentLang].save"></span>
-                </sl-button>
-                <sl-button variant="default" @click="clearMemo()">
-                    <span class="iconify mr-2" data-icon="mdi:eraser"></span>
-                    <span x-text="translations[currentLang].clear"></span>
-                </sl-button>
-                <sl-button variant="danger" @click="deleteMemo()" x-show="hasExistingMemo">
-                    <span class="iconify mr-2" data-icon="mdi:delete"></span>
-                    <span x-text="translations[currentLang].delete"></span>
-                </sl-button>
+            <!-- Action Buttons with Clear Icons -->
+            <div class="mt-4 flex gap-3 flex-wrap">
+                <button @click="saveMemo()" :disabled="loading" class="icon-button icon-button-save" :title="translations[currentLang].save">
+                    <span class="iconify text-2xl" data-icon="mdi:content-save"></span>
+                </button>
+                <span class="text-sm self-center font-medium" x-text="translations[currentLang].save"></span>
+                
+                <button @click="clearMemo()" class="icon-button icon-button-clear ml-4" :title="translations[currentLang].clear">
+                    <span class="iconify text-2xl" data-icon="mdi:eraser"></span>
+                </button>
+                <span class="text-sm self-center font-medium" x-text="translations[currentLang].clear"></span>
+                
+                <button x-show="hasExistingMemo" @click="deleteMemo()" class="icon-button icon-button-delete ml-4" :title="translations[currentLang].delete">
+                    <span class="iconify text-2xl" data-icon="mdi:delete"></span>
+                </button>
+                <span x-show="hasExistingMemo" class="text-sm self-center font-medium" x-text="translations[currentLang].delete"></span>
             </div>
-
-            <!-- Success/Error Messages -->
-            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''" class="mt-4">
-                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
-                <span x-text="successMessage"></span>
-            </sl-alert>
-            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''" class="mt-4">
-                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
-                <span x-text="errorMessage"></span>
-            </sl-alert>
         </div>
 
         <!-- All Memos List -->
@@ -279,22 +353,24 @@
                                     <span class="iconify mr-1" :data-icon="isAppointmentDate(memo.memo_date) ? 'mdi:calendar-check' : 'mdi:note'"></span>
                                 </sl-badge>
                             </div>
-                            <div class="text-sm">
+                            <div class="text-sm memo-content line-clamp-none">
                                 <div class="mb-2" x-show="memo.patient_memo">
                                     <strong x-text="translations[currentLang].patientMemo + ':'"></strong>
-                                    <div class="line-clamp-2 whitespace-pre-wrap" x-text="memo.patient_memo"></div>
+                                    <div x-text="memo.patient_memo"></div>
                                 </div>
                                 <div x-show="memo.doctor_memo">
                                     <strong x-text="translations[currentLang].doctorMemo + ':'"></strong>
-                                    <div class="line-clamp-2 whitespace-pre-wrap" x-text="memo.doctor_memo"></div>
+                                    <div x-text="memo.doctor_memo"></div>
                                 </div>
                             </div>
                             <div class="mt-2 flex gap-2">
                                 <sl-button size="small" variant="primary" @click.stop="jumpToMemoDate(memo.memo_date)">
                                     <span class="iconify" data-icon="mdi:eye"></span>
+                                    <span x-text="translations[currentLang].view"></span>
                                 </sl-button>
                                 <sl-button size="small" variant="danger" @click.stop="deleteMemoByDate(memo.memo_date)">
                                     <span class="iconify" data-icon="mdi:delete"></span>
+                                    <span x-text="translations[currentLang].delete"></span>
                                 </sl-button>
                             </div>
                         </div>
@@ -454,6 +530,7 @@ function calendarData() {
                 save: '保存',
                 clear: 'クリア',
                 delete: '削除',
+                view: '表示',
                 allMemos: 'メモ一覧',
                 exportFormat: 'エクスポート形式',
                 startDate: '開始日',
@@ -487,6 +564,7 @@ function calendarData() {
                 save: 'Save',
                 clear: 'Clear',
                 delete: 'Delete',
+                view: 'View',
                 allMemos: 'All Memos',
                 exportFormat: 'Export Format',
                 startDate: 'Start Date',
@@ -540,6 +618,7 @@ function calendarData() {
                 }
             } catch (err) {
                 console.error('Load clinics error:', err);
+                this.showError('クリニックの読み込みに失敗しました');
             }
         },
         onHospitalChange() {
@@ -701,12 +780,26 @@ function calendarData() {
             } else {
                 this.previousMemos = [];
             }
+            
+            // Scroll to memo section
+            setTimeout(() => {
+                const memoSection = document.querySelector('[x-show="selectedDate"]');
+                if (memoSection) {
+                    memoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
         },
         async saveMemo() {
-            if (!this.selectedDate || (!this.currentPatientMemo.trim() && !this.currentDoctorMemo.trim())) {
-                this.errorMessage = this.currentLang === 'ja' ? 'メモを入力してください' : 'Please enter memo';
+            if (!this.selectedDate) {
+                this.showError(this.currentLang === 'ja' ? '日付を選択してください' : 'Please select a date');
                 return;
             }
+            
+            if (!this.currentPatientMemo.trim() && !this.currentDoctorMemo.trim()) {
+                this.showError(this.currentLang === 'ja' ? 'メモを入力してください' : 'Please enter memo');
+                return;
+            }
+            
             this.loading = true;
             try {
                 const API_URL = 'https://clinic-note-api.onrender.com';
@@ -732,15 +825,15 @@ function calendarData() {
                 if (response.ok) {
                     await this.loadMemos();
                     this.hasExistingMemo = true;
-                    this.successMessage = this.currentLang === 'ja' ? 'メモを保存しました' : 'Memo saved';
+                    this.showSuccess(this.currentLang === 'ja' ? 'メモを保存しました' : 'Memo saved');
                     this.updateAllMemosList();
                     this.generateCalendar();
                 } else {
                     const errorData = await response.json();
-                    this.errorMessage = errorData.message || (this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed');
+                    this.showError(errorData.message || (this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed'));
                 }
             } catch (err) {
-                this.errorMessage = this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed';
+                this.showError(this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed');
                 console.error('Save memo error:', err);
             } finally {
                 this.loading = false;
@@ -778,13 +871,13 @@ function calendarData() {
                         this.currentPatientMemo = '';
                         this.currentDoctorMemo = '';
                         this.hasExistingMemo = false;
-                        this.successMessage = this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted';
+                        this.showSuccess(this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted');
                         this.updateAllMemosList();
                         this.generateCalendar();
                     }
                 }
             } catch (err) {
-                this.errorMessage = this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed';
+                this.showError(this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed');
                 console.error('Delete memo error:', err);
             } finally {
                 this.loading = false;
@@ -811,7 +904,7 @@ function calendarData() {
                     
                     if (response.ok) {
                         await this.loadMemos();
-                        this.successMessage = this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted';
+                        this.showSuccess(this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted');
                         this.updateAllMemosList();
                         this.generateCalendar();
                         
@@ -823,7 +916,7 @@ function calendarData() {
                     }
                 }
             } catch (err) {
-                this.errorMessage = this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed';
+                this.showError(this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed');
                 console.error('Delete memo by date error:', err);
             }
         },
@@ -836,10 +929,6 @@ function calendarData() {
                 const dateObj = this.calendarDates.find(d => this.formatDate(d.date) === dateStr);
                 if (dateObj) {
                     this.selectDate(dateObj);
-                    const memoSection = document.querySelector('[x-show="selectedDate"]');
-                    if (memoSection) {
-                        memoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
                 }
             }, 100);
         },
@@ -872,6 +961,20 @@ function calendarData() {
                 return `${diffDays}日前`;
             }
             return `${diffDays} days ago`;
+        },
+        showSuccess(message) {
+            this.successMessage = message;
+            this.errorMessage = '';
+            setTimeout(() => {
+                this.successMessage = '';
+            }, 5000);
+        },
+        showError(message) {
+            this.errorMessage = message;
+            this.successMessage = '';
+            setTimeout(() => {
+                this.errorMessage = '';
+            }, 5000);
         },
         async exportData() {
             try {
@@ -917,12 +1020,12 @@ function calendarData() {
                     }
                     
                     this.showExportDialog = false;
-                    this.successMessage = this.currentLang === 'ja' ? 'エクスポート完了' : 'Export completed';
+                    this.showSuccess(this.currentLang === 'ja' ? 'エクスポート完了' : 'Export completed');
                 } else {
-                    this.errorMessage = this.currentLang === 'ja' ? 'エクスポート失敗' : 'Export failed';
+                    this.showError(this.currentLang === 'ja' ? 'エクスポート失敗' : 'Export failed');
                 }
             } catch (err) {
-                this.errorMessage = this.currentLang === 'ja' ? 'エクスポート失敗' : 'Export failed';
+                this.showError(this.currentLang === 'ja' ? 'エクスポート失敗' : 'Export failed');
                 console.error('Export error:', err);
             }
         },
@@ -1000,15 +1103,15 @@ function calendarData() {
                         this.generateCalendar();
                         this.showImportDialog = false;
                         this.selectedFile = null;
-                        this.successMessage = this.currentLang === 'ja' ? `インポート完了 (${successCount}件)` : `Import completed (${successCount} items)`;
+                        this.showSuccess(this.currentLang === 'ja' ? `インポート完了 (${successCount}件)` : `Import completed (${successCount} items)`);
                     } catch (err) {
-                        this.errorMessage = this.currentLang === 'ja' ? 'インポート失敗' : 'Import failed';
+                        this.showError(this.currentLang === 'ja' ? 'インポート失敗' : 'Import failed');
                         console.error('Import parse error:', err);
                     }
                 };
                 reader.readAsText(this.selectedFile);
             } catch (err) {
-                this.errorMessage = this.currentLang === 'ja' ? 'ファイル読み込み失敗' : 'File read failed';
+                this.showError(this.currentLang === 'ja' ? 'ファイル読み込み失敗' : 'File read failed');
                 console.error('Import error:', err);
             }
         },
@@ -1056,16 +1159,16 @@ function calendarData() {
                     printArea.classList.add('hidden');
                     this.showPrintDialog = false;
                 } else {
-                    this.errorMessage = this.currentLang === 'ja' ? '印刷失敗' : 'Print failed';
+                    this.showError(this.currentLang === 'ja' ? '印刷失敗' : 'Print failed');
                 }
             } catch (err) {
-                this.errorMessage = this.currentLang === 'ja' ? '印刷失敗' : 'Print failed';
+                this.showError(this.currentLang === 'ja' ? '印刷失敗' : 'Print failed');
                 console.error('Print error:', err);
             }
         },
         async sendEmail() {
             if (!this.emailAddress) {
-                this.errorMessage = this.currentLang === 'ja' ? 'メールアドレスを入力してください' : 'Please enter email address';
+                this.showError(this.currentLang === 'ja' ? 'メールアドレスを入力してください' : 'Please enter email address');
                 return;
             }
             
@@ -1100,40 +1203,17 @@ function calendarData() {
                     window.location.href = mailtoLink;
                     
                     this.showEmailDialog = false;
-                    this.successMessage = this.currentLang === 'ja' ? 'メールアプリを開きました' : 'Email app opened';
+                    this.showSuccess(this.currentLang === 'ja' ? 'メールアプリを開きました' : 'Email app opened');
                 } else {
-                    this.errorMessage = this.currentLang === 'ja' ? 'メール送信失敗' : 'Email send failed';
+                    this.showError(this.currentLang === 'ja' ? 'メール送信失敗' : 'Email send failed');
                 }
             } catch (err) {
-                this.errorMessage = this.currentLang === 'ja' ? 'メール送信失敗' : 'Email send failed';
+                this.showError(this.currentLang === 'ja' ? 'メール送信失敗' : 'Email send failed');
                 console.error('Email error:', err);
             }
         }
     };
 }
     </script>
-    
-    <style>
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        .memo-history-card {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-            border-left: 4px solid #f59e0b !important;
-        }
-        
-        .all-memos-card {
-            transition: all 0.3s ease;
-        }
-        
-        .all-memos-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-    </style>
 </body>
 </html>
