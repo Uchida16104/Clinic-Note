@@ -12,6 +12,7 @@
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <style>
+        /* 入力フィールド・カード・枠の背景色を白に統一 */
         sl-input::part(base), 
         sl-textarea::part(base), 
         sl-select::part(combobox) {
@@ -38,6 +39,7 @@
             background-color: #ffffff !important;
         }
         
+        /* 全てのテキスト要素を黒系に統一 */
         h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
             color: #1f2937 !important;
         }
@@ -52,8 +54,8 @@
         <!-- Header -->
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
-                <h1 class="text-4xl font-bold" x-text="translations[currentLang].title"></h1>
-                <p class="mt-2">
+                <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
+                <p class="mt-2 text-gray-700">
                     <span x-text="translations[currentLang].subtitle"></span>
                     <sl-badge variant="success" pill x-show="syncStatus === 'synced'" class="ml-2">
                         <span class="iconify mr-1" data-icon="mdi:cloud-check"></span>
@@ -86,28 +88,28 @@
         <!-- Navigation -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" data-aos="fade-up">
             <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="window.location.href='/calendar.html'">
-                <div class="text-center p-4">
-                    <span class="iconify text-6xl text-green-500 mb-4" data-icon="mdi:calendar"></span>
-                    <h3 class="text-xl font-bold" x-text="translations[currentLang].calendar"></h3>
+                <div class="text-center p-4" style="background-color: #ffffff !important;">
+                    <span class="iconify text-6xl mb-4" data-icon="mdi:calendar" style="color: #10b981;"></span>
+                    <h3 class="text-xl font-bold text-gray-800" x-text="translations[currentLang].calendar" style="color: #1f2937 !important;"></h3>
                 </div>
             </sl-card>
             <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="window.location.href='/analytics.html'">
-                <div class="text-center p-4">
-                    <span class="iconify text-6xl text-purple-500 mb-4" data-icon="mdi:chart-line"></span>
-                    <h3 class="text-xl font-bold" x-text="translations[currentLang].analytics"></h3>
+                <div class="text-center p-4" style="background-color: #ffffff !important;">
+                    <span class="iconify text-6xl mb-4" data-icon="mdi:chart-line" style="color: #a855f7;"></span>
+                    <h3 class="text-xl font-bold text-gray-800" x-text="translations[currentLang].analytics" style="color: #1f2937 !important;"></h3>
                 </div>
             </sl-card>
             <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="showAddClinicDialog = true">
-                <div class="text-center p-4">
-                    <span class="iconify text-6xl text-blue-500 mb-4" data-icon="mdi:hospital-building"></span>
-                    <h3 class="text-xl font-bold" x-text="translations[currentLang].addClinic"></h3>
+                <div class="text-center p-4" style="background-color: #ffffff !important;">
+                    <span class="iconify text-6xl mb-4" data-icon="mdi:hospital-building" style="color: #3b82f6;"></span>
+                    <h3 class="text-xl font-bold text-gray-800" x-text="translations[currentLang].addClinic" style="color: #1f2937 !important;"></h3>
                 </div>
             </sl-card>
         </div>
 
         <!-- Clinic List -->
-        <div class="bg-white rounded-2xl shadow-xl p-8" data-aos="fade-up" data-aos-delay="200">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
+        <div class="bg-white rounded-2xl shadow-xl p-8" data-aos="fade-up" data-aos-delay="200" style="background-color: #ffffff !important;">
+            <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800" style="color: #1f2937 !important;">
                 <span class="iconify text-indigo-600 mr-2" data-icon="mdi:hospital-box"></span>
                 <span x-text="translations[currentLang].clinicList"></span>
             </h2>
@@ -119,20 +121,20 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <template x-for="clinic in clinics" :key="clinic.id">
-                    <sl-card>
-                        <div class="p-4">
+                    <sl-card style="background-color: #ffffff !important;">
+                        <div class="p-4" style="background-color: #ffffff !important;">
                             <div class="flex justify-between items-start mb-3">
-                                <h3 class="text-lg font-bold" x-text="clinic.hospital_name"></h3>
+                                <h3 class="text-lg font-bold text-gray-800" x-text="clinic.hospital_name" style="color: #1f2937 !important;"></h3>
                                 <sl-badge variant="primary" x-text="clinic.department"></sl-badge>
                             </div>
-                            <div class="space-y-2 text-sm">
+                            <div class="space-y-2 text-sm text-gray-700" style="color: #1f2937 !important;">
                                 <div class="flex items-start" x-show="clinic.diagnosis">
-                                    <span class="iconify text-red-500 mr-2 mt-1" data-icon="mdi:medical-bag"></span>
-                                    <span x-text="clinic.diagnosis"></span>
+                                    <span class="iconify mr-2 mt-1" data-icon="mdi:medical-bag" style="color: #ef4444;"></span>
+                                    <span x-text="clinic.diagnosis" style="color: #1f2937 !important;"></span>
                                 </div>
                                 <div class="flex items-start" x-show="clinic.medication">
-                                    <span class="iconify text-green-500 mr-2 mt-1" data-icon="mdi:pill"></span>
-                                    <span x-text="clinic.medication"></span>
+                                    <span class="iconify mr-2 mt-1" data-icon="mdi:pill" style="color: #10b981;"></span>
+                                    <span x-text="clinic.medication" style="color: #1f2937 !important;"></span>
                                 </div>
                             </div>
                             <div class="mt-4 flex gap-2">
@@ -277,9 +279,11 @@
                         appointmentTime: 'Time'
                     }
                 },
+                
                 async init() {
                     const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
                     this.currentLang = savedLang;
+                    
                     const authToken = localStorage.getItem('authToken');
                     if (!authToken) {
                         window.location.href = '/login.html';
@@ -294,34 +298,42 @@
                     await this.loadClinics();
                     this.startAutoSync();
                 },
+                
                 switchLanguage(lang) {
                     this.currentLang = lang;
                     localStorage.setItem('clinicNoteLang', lang);
                 },
+                
                 async loadClinics() {
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
                         const response = await fetch(`${API_URL}/api/clinics`, {
                             headers: {
                                 'Authorization': `Bearer ${authToken}`,
                                 'X-Basic-Auth': basicAuthToken
                             }
                         });
+                        
                         if (response.ok) {
                             this.clinics = await response.json();
+                            console.log('Loaded clinics:', this.clinics.length);
                         }
                     } catch (err) {
                         console.error('Load clinics error:', err);
                     }
                 },
+                
                 async addClinic() {
                     this.loading = true;
+                    
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
                         const response = await fetch(`${API_URL}/api/clinics`, {
                             method: 'POST',
                             headers: {
@@ -331,6 +343,7 @@
                             },
                             body: JSON.stringify(this.newClinic)
                         });
+                        
                         if (response.ok) {
                             await this.loadClinics();
                             this.showAddClinicDialog = false;
@@ -343,12 +356,15 @@
                         this.loading = false;
                     }
                 },
+                
                 async deleteClinic(id) {
                     if (!confirm(this.currentLang === 'ja' ? '本当に削除しますか?' : 'Are you sure to delete?')) return;
+                    
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
                         const response = await fetch(`${API_URL}/api/clinics/${id}`, {
                             method: 'DELETE',
                             headers: {
@@ -356,6 +372,7 @@
                                 'X-Basic-Auth': basicAuthToken
                             }
                         });
+                        
                         if (response.ok) {
                             await this.loadClinics();
                             await this.syncData();
@@ -364,20 +381,24 @@
                         console.error('Delete clinic error:', err);
                     }
                 },
+                
                 selectClinicForAppointment(clinic) {
                     this.selectedClinic = clinic;
                     this.showAppointmentDialog = true;
                     this.appointmentSuccess = '';
                     this.appointmentError = '';
                 },
+                
                 async addAppointment() {
                     this.loading = true;
                     this.appointmentSuccess = '';
                     this.appointmentError = '';
+                    
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
                         const response = await fetch(`${API_URL}/api/appointments`, {
                             method: 'POST',
                             headers: {
@@ -391,10 +412,12 @@
                                 appointment_time: this.newAppointment.time || null
                             })
                         });
+                        
                         if (response.ok) {
                             this.appointmentSuccess = this.currentLang === 'ja' ? '通院日を追加しました' : 'Appointment added';
                             this.newAppointment = { date: '', time: '' };
                             await this.syncData();
+                            
                             setTimeout(() => {
                                 this.showAppointmentDialog = false;
                             }, 2000);
@@ -409,8 +432,10 @@
                         this.loading = false;
                     }
                 },
+                
                 async syncData() {
                     this.syncStatus = 'syncing';
+                    
                     try {
                         await this.loadClinics();
                         this.syncStatus = 'synced';
@@ -419,11 +444,13 @@
                         this.syncStatus = 'synced';
                     }
                 },
+                
                 startAutoSync() {
                     this.syncInterval = setInterval(() => {
                         this.syncData();
-                    }, 300000);
+                    }, 300000); // 5分ごとに同期
                 },
+                
                 logout() {
                     if (this.syncInterval) clearInterval(this.syncInterval);
                     localStorage.removeItem('authToken');

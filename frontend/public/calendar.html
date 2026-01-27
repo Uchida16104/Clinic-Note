@@ -17,13 +17,40 @@
             #printArea, #printArea * { visibility: visible; }
             #printArea { position: absolute; left: 0; top: 0; width: 100%; }
         }
-        .memo-date { background-color: #fef3c7 !important; border: 2px solid #f59e0b !important; }
         
+        /* 全てのカレンダー日付に背景色と文字色を統一 */
+        .calendar-date-cell {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        
+        /* メモがある日付 */
+        .memo-date { 
+            background-color: #fef3c7 !important; 
+            border: 2px solid #f59e0b !important; 
+            color: #1f2937 !important;
+        }
+        
+        /* 今日の日付 */
+        .today-date {
+            background-color: #3b82f6 !important;
+            color: #ffffff !important;
+        }
+        
+        /* 通院日の日付 */
+        .appointment-date {
+            background-color: #d1fae5 !important;
+            border: 2px solid #10b981 !important;
+            color: #1f2937 !important;
+        }
+        
+        /* 入力フィールド・カード・枠の背景色を白に統一 */
         sl-input::part(base), 
         sl-textarea::part(base), 
         sl-select::part(combobox) {
             background-color: #ffffff !important;
             border: 1px solid #d1d5db !important;
+            color: #1f2937 !important;
         }
         
         sl-input::part(input), 
@@ -45,7 +72,8 @@
             background-color: #ffffff !important;
         }
         
-        h1, h2, h3, h4, h5, h6, p, span, div, label {
+        /* 全てのテキスト要素を黒系に統一 */
+        h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
             color: #1f2937 !important;
         }
         
@@ -56,6 +84,12 @@
         @media (max-width: 768px) {
             .grid-cols-7 { gap: 0.25rem; }
             .aspect-square { font-size: 0.75rem; }
+            
+            /* モバイル端末でも背景色と文字色を明確に */
+            .stats-card {
+                background-color: #ffffff !important;
+                color: #1f2937 !important;
+            }
         }
         
         .line-clamp-none {
@@ -70,15 +104,20 @@
             word-wrap: break-word;
             max-height: none;
             overflow: visible;
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
         }
         
         .memo-history-card {
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
             border-left: 4px solid #f59e0b !important;
+            color: #1f2937 !important;
         }
         
         .all-memos-card {
             transition: all 0.3s ease;
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
         }
         
         .all-memos-card:hover {
@@ -95,6 +134,7 @@
             border-radius: 8px;
             transition: all 0.3s ease;
             cursor: pointer;
+            border: none;
         }
         
         .icon-button:hover {
@@ -109,6 +149,15 @@
         
         .icon-button-save:hover {
             background-color: #059669;
+        }
+        
+        .icon-button-edit {
+            background-color: #3b82f6;
+            color: white;
+        }
+        
+        .icon-button-edit:hover {
+            background-color: #2563eb;
         }
         
         .icon-button-clear {
@@ -128,6 +177,24 @@
         .icon-button-delete:hover {
             background-color: #dc2626;
         }
+        
+        .icon-button-print {
+            background-color: #f59e0b;
+            color: white;
+        }
+        
+        .icon-button-print:hover {
+            background-color: #d97706;
+        }
+        
+        .icon-button-email {
+            background-color: #8b5cf6;
+            color: white;
+        }
+        
+        .icon-button-email:hover {
+            background-color: #7c3aed;
+        }
 
         .icon-button:disabled {
             opacity: 0.5;
@@ -138,15 +205,44 @@
             transform: none;
             box-shadow: none;
         }
+        
+        /* 通知トースト */
+        .toast-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="calendarData()" x-init="init()" class="container mx-auto px-4 py-8">
+        <!-- Toast Notification -->
+        <div x-show="toastMessage" x-transition class="toast-notification" style="display: none;">
+            <sl-alert :variant="toastType" open closable @sl-after-hide="toastMessage = ''">
+                <span class="iconify slot-icon" :data-icon="toastType === 'success' ? 'mdi:check-circle' : 'mdi:alert-circle'"></span>
+                <span x-text="toastMessage"></span>
+            </sl-alert>
+        </div>
+
         <!-- Header -->
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
-                <h1 class="text-4xl font-bold" x-text="translations[currentLang].title"></h1>
-                <p class="mt-2" x-text="translations[currentLang].subtitle"></p>
+                <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
+                <p class="mt-2 text-gray-700" x-text="translations[currentLang].subtitle"></p>
             </div>
             <div class="flex gap-2">
                 <sl-button-group label="Language">
@@ -165,10 +261,10 @@
 
         <!-- Clinic Selection -->
         <div class="bg-white rounded-2xl shadow-xl p-6 mb-8" data-aos="fade-up">
-            <h2 class="text-2xl font-bold mb-4" x-text="translations[currentLang].selectClinic"></h2>
+            <h2 class="text-2xl font-bold mb-4 text-gray-800" x-text="translations[currentLang].selectClinic"></h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].hospitalPlaceholder"></label>
+                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].hospitalPlaceholder"></label>
                     <sl-select
                         :placeholder="translations[currentLang].hospitalPlaceholder"
                         size="large"
@@ -180,7 +276,7 @@
                     </sl-select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].departmentPlaceholder"></label>
+                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].departmentPlaceholder"></label>
                     <sl-select
                         :placeholder="translations[currentLang].departmentPlaceholder"
                         size="large"
@@ -197,7 +293,7 @@
 
         <!-- Export/Import/Print/Email Buttons -->
         <div x-show="selectedHospital && selectedDepartment" class="bg-white rounded-2xl shadow-xl p-6 mb-8" data-aos="fade-up">
-            <h2 class="text-2xl font-bold mb-4" x-text="translations[currentLang].actions"></h2>
+            <h2 class="text-2xl font-bold mb-4 text-gray-800" x-text="translations[currentLang].actions"></h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <sl-button variant="primary" @click="showExportDialog = true">
                     <span class="iconify mr-2" data-icon="mdi:download"></span>
@@ -224,7 +320,7 @@
                 <sl-button @click="previousMonth()">
                     <span class="iconify" data-icon="mdi:chevron-left"></span>
                 </sl-button>
-                <h2 class="text-2xl font-bold" x-text="currentMonthYear"></h2>
+                <h2 class="text-2xl font-bold text-gray-800" x-text="currentMonthYear"></h2>
                 <sl-button @click="nextMonth()">
                     <span class="iconify" data-icon="mdi:chevron-right"></span>
                 </sl-button>
@@ -232,26 +328,26 @@
 
             <div class="grid grid-cols-7 gap-2">
                 <template x-for="day in daysOfWeek" :key="day">
-                    <div class="text-center font-bold py-2" x-text="day"></div>
+                    <div class="text-center font-bold py-2 text-gray-800" x-text="day"></div>
                 </template>
                 <template x-for="date in calendarDates" :key="date.key">
                     <div
                         @click="selectDate(date)"
-                        class="aspect-square p-2 border rounded-lg cursor-pointer transition-all hover:shadow-md"
+                        class="aspect-square p-2 border rounded-lg cursor-pointer transition-all hover:shadow-md calendar-date-cell"
                         :class="{
                             'bg-gray-100 text-gray-400': !date.isCurrentMonth,
-                            'bg-blue-500 text-white font-bold': date.isToday,
-                            'bg-green-100 border-green-500': date.hasAppointment,
+                            'today-date': date.isToday,
+                            'appointment-date': date.hasAppointment && !date.isToday,
                             'memo-date': date.hasMemo && !date.hasAppointment && !date.isToday,
                             'hover:bg-indigo-50': date.isCurrentMonth
                         }">
                         <div class="text-center">
                             <div class="text-sm font-semibold" x-text="date.day"></div>
                             <template x-if="date.hasAppointment">
-                                <span class="iconify text-xs" data-icon="mdi:calendar-check"></span>
+                                <span class="iconify text-xs text-green-600" data-icon="mdi:calendar-check"></span>
                             </template>
                             <template x-if="date.hasMemo && !date.hasAppointment">
-                                <span class="iconify text-xs" data-icon="mdi:note-text"></span>
+                                <span class="iconify text-xs text-yellow-600" data-icon="mdi:note-text"></span>
                             </template>
                         </div>
                     </div>
@@ -261,20 +357,10 @@
 
         <!-- Memo Section -->
         <div x-show="selectedDate" class="bg-white rounded-2xl shadow-xl p-6 mb-8" data-aos="fade-up" data-aos-delay="400">
-            <h2 class="text-2xl font-bold mb-4 flex items-center">
+            <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
                 <span class="iconify text-indigo-600 mr-2" data-icon="mdi:note-edit"></span>
                 <span x-text="translations[currentLang].memo + ' - ' + selectedDateFormatted"></span>
             </h2>
-
-            <!-- Success/Error Messages -->
-            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''" class="mb-4">
-                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
-                <span x-text="successMessage"></span>
-            </sl-alert>
-            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''" class="mb-4">
-                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
-                <span x-text="errorMessage"></span>
-            </sl-alert>
 
             <!-- Appointment Alert -->
             <sl-alert x-show="isAppointmentDay" variant="success" open class="mb-4">
@@ -284,7 +370,7 @@
 
             <!-- Previous Memos for Appointment Day -->
             <div x-show="previousMemos.length > 0" class="mb-6">
-                <h3 class="text-lg font-semibold mb-3 flex items-center">
+                <h3 class="text-lg font-semibold mb-3 flex items-center text-gray-800">
                     <span class="iconify text-purple-600 mr-2" data-icon="mdi:history"></span>
                     <span x-text="translations[currentLang].previousMemos"></span>
                 </h3>
@@ -316,7 +402,7 @@
 
             <!-- Patient Memo Editor -->
             <div class="mb-4">
-                <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].patientMemo"></label>
+                <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].patientMemo"></label>
                 <sl-textarea
                     x-model="currentPatientMemo"
                     :placeholder="translations[currentLang].patientMemoPlaceholder"
@@ -327,7 +413,7 @@
 
             <!-- Doctor Memo Editor -->
             <div class="mb-4">
-                <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].doctorMemo"></label>
+                <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].doctorMemo"></label>
                 <sl-textarea
                     x-model="currentDoctorMemo"
                     :placeholder="translations[currentLang].doctorMemoPlaceholder"
@@ -341,23 +427,33 @@
                 <button @click="saveMemo()" :disabled="loading" class="icon-button icon-button-save" :title="translations[currentLang].save">
                     <span class="iconify text-2xl" data-icon="mdi:content-save"></span>
                 </button>
-                <span class="text-sm font-medium" x-text="translations[currentLang].save"></span>
+                <span class="text-sm font-medium text-gray-800" x-text="translations[currentLang].save"></span>
                 
                 <button @click="clearMemo()" :disabled="loading" class="icon-button icon-button-clear ml-4" :title="translations[currentLang].clear">
                     <span class="iconify text-2xl" data-icon="mdi:eraser"></span>
                 </button>
-                <span class="text-sm font-medium" x-text="translations[currentLang].clear"></span>
+                <span class="text-sm font-medium text-gray-800" x-text="translations[currentLang].clear"></span>
                 
                 <button x-show="hasExistingMemo" @click="deleteMemo()" :disabled="loading" class="icon-button icon-button-delete ml-4" :title="translations[currentLang].delete">
                     <span class="iconify text-2xl" data-icon="mdi:delete"></span>
                 </button>
-                <span x-show="hasExistingMemo" class="text-sm font-medium" x-text="translations[currentLang].delete"></span>
+                <span x-show="hasExistingMemo" class="text-sm font-medium text-gray-800" x-text="translations[currentLang].delete"></span>
+                
+                <button x-show="hasExistingMemo" @click="printSingleMemo()" :disabled="loading" class="icon-button icon-button-print ml-4" :title="translations[currentLang].print">
+                    <span class="iconify text-2xl" data-icon="mdi:printer"></span>
+                </button>
+                <span x-show="hasExistingMemo" class="text-sm font-medium text-gray-800" x-text="translations[currentLang].print"></span>
+                
+                <button x-show="hasExistingMemo" @click="emailSingleMemo()" :disabled="loading" class="icon-button icon-button-email ml-4" :title="translations[currentLang].email">
+                    <span class="iconify text-2xl" data-icon="mdi:email"></span>
+                </button>
+                <span x-show="hasExistingMemo" class="text-sm font-medium text-gray-800" x-text="translations[currentLang].email"></span>
             </div>
         </div>
 
         <!-- All Memos List -->
         <div x-show="selectedHospital && selectedDepartment && allMemosList.length > 0" class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="600">
-            <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800">
                 <span class="iconify text-indigo-600 mr-2" data-icon="mdi:notebook"></span>
                 <span x-text="translations[currentLang].allMemos"></span>
             </h2>
@@ -366,12 +462,12 @@
                     <sl-card class="all-memos-card cursor-pointer hover:shadow-lg transition-shadow" @click="jumpToMemoDate(memo.memo_date)">
                         <div class="p-2">
                             <div class="flex items-center justify-between mb-2">
-                                <div class="font-bold" x-text="formatMemoDate(memo.memo_date)"></div>
+                                <div class="font-bold text-gray-800" x-text="formatMemoDate(memo.memo_date)"></div>
                                 <sl-badge :variant="isAppointmentDate(memo.memo_date) ? 'success' : 'neutral'" pill>
                                     <span class="iconify mr-1" :data-icon="isAppointmentDate(memo.memo_date) ? 'mdi:calendar-check' : 'mdi:note'"></span>
                                 </sl-badge>
                             </div>
-                            <div class="text-sm memo-content line-clamp-none">
+                            <div class="text-sm memo-content line-clamp-none text-gray-700">
                                 <div class="mb-2" x-show="memo.patient_memo">
                                     <strong x-text="translations[currentLang].patientMemo + ':'"></strong>
                                     <div x-text="memo.patient_memo"></div>
@@ -401,7 +497,7 @@
         <sl-dialog :open="showExportDialog" @sl-request-close="showExportDialog = false" :label="translations[currentLang].export">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].exportFormat"></label>
+                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].exportFormat"></label>
                     <sl-select x-model="exportFormat" size="large">
                         <sl-option value="json">JSON</sl-option>
                         <sl-option value="csv">CSV</sl-option>
@@ -409,11 +505,11 @@
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].startDate"></label>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].startDate"></label>
                         <sl-input type="date" x-model="exportStartDate" size="large"></sl-input>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].endDate"></label>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].endDate"></label>
                         <sl-input type="date" x-model="exportEndDate" size="large"></sl-input>
                     </div>
                 </div>
@@ -428,8 +524,8 @@
         <sl-dialog :open="showImportDialog" @sl-request-close="showImportDialog = false" :label="translations[currentLang].import">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].selectFile"></label>
-                    <input type="file" @change="handleFileSelect" accept=".json,.csv" class="w-full p-2 border rounded bg-white">
+                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].selectFile"></label>
+                    <input type="file" @change="handleFileSelect" accept=".json,.csv" class="w-full p-2 border rounded bg-white text-gray-800">
                 </div>
                 <sl-button variant="success" class="w-full" @click="importData()" :disabled="!selectedFile">
                     <span class="iconify mr-2" data-icon="mdi:upload"></span>
@@ -443,11 +539,11 @@
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].startDate"></label>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].startDate"></label>
                         <sl-input type="date" x-model="printStartDate" size="large"></sl-input>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].endDate"></label>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].endDate"></label>
                         <sl-input type="date" x-model="printEndDate" size="large"></sl-input>
                     </div>
                 </div>
@@ -462,16 +558,16 @@
         <sl-dialog :open="showEmailDialog" @sl-request-close="showEmailDialog = false" :label="translations[currentLang].email">
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].emailAddress"></label>
+                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].emailAddress"></label>
                     <sl-input type="email" x-model="emailAddress" size="large" :placeholder="translations[currentLang].emailPlaceholder"></sl-input>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].startDate"></label>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].startDate"></label>
                         <sl-input type="date" x-model="emailStartDate" size="large"></sl-input>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium mb-2" x-text="translations[currentLang].endDate"></label>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].endDate"></label>
                         <sl-input type="date" x-model="emailEndDate" size="large"></sl-input>
                     </div>
                 </div>
@@ -485,7 +581,8 @@
         <!-- Print Area (Hidden) -->
         <div id="printArea" class="hidden"></div>
     </div>
-    <script type="module" src="/calendar.js"></script>
+    
+    <script src="/calendar.js"></script>
     <script>
 function calendarData() {
     return {
@@ -507,8 +604,8 @@ function calendarData() {
         calendarDates: [],
         currentMonthYear: '',
         isAppointmentDay: false,
-        successMessage: '',
-        errorMessage: '',
+        toastMessage: '',
+        toastType: 'success',
         daysOfWeek: [],
         hasExistingMemo: false,
         currentMemoId: null,
@@ -560,7 +657,18 @@ function calendarData() {
                 sendButton: '送信',
                 selectFile: 'ファイルを選択',
                 emailAddress: 'メールアドレス',
-                emailPlaceholder: 'example@example.com'
+                emailPlaceholder: 'example@example.com',
+                saveSuccess: 'メモを保存しました',
+                deleteSuccess: 'メモを削除しました',
+                exportSuccess: 'エクスポートが完了しました',
+                importSuccess: 'インポートが完了しました',
+                printSuccess: '印刷を開始します',
+                emailSuccess: 'メールアプリを開きました',
+                loadError: '読み込みに失敗しました',
+                saveError: '保存に失敗しました',
+                deleteError: '削除に失敗しました',
+                exportError: 'エクスポートに失敗しました',
+                importError: 'インポートに失敗しました'
             },
             en: {
                 title: 'Calendar',
@@ -594,13 +702,26 @@ function calendarData() {
                 sendButton: 'Send',
                 selectFile: 'Select File',
                 emailAddress: 'Email Address',
-                emailPlaceholder: 'example@example.com'
+                emailPlaceholder: 'example@example.com',
+                saveSuccess: 'Memo saved successfully',
+                deleteSuccess: 'Memo deleted successfully',
+                exportSuccess: 'Export completed',
+                importSuccess: 'Import completed',
+                printSuccess: 'Print started',
+                emailSuccess: 'Email app opened',
+                loadError: 'Failed to load',
+                saveError: 'Failed to save',
+                deleteError: 'Failed to delete',
+                exportError: 'Export failed',
+                importError: 'Import failed'
             }
         },
+        
         async init() {
             const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
             this.currentLang = savedLang;
             this.daysOfWeek = this.currentLang === 'ja' ? ['日', '月', '火', '水', '木', '金', '土'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
             const authToken = localStorage.getItem('authToken');
             if (!authToken) {
                 window.location.href = '/login.html';
@@ -615,63 +736,89 @@ function calendarData() {
             await this.loadClinics();
             this.generateCalendar();
         },
+        
         switchLanguage(lang) {
             this.currentLang = lang;
             localStorage.setItem('clinicNoteLang', lang);
             this.daysOfWeek = lang === 'ja' ? ['日', '月', '火', '水', '木', '金', '土'] : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         },
+        
+        showToast(message, type = 'success') {
+            this.toastMessage = message;
+            this.toastType = type;
+            setTimeout(() => {
+                this.toastMessage = '';
+            }, 5000);
+        },
+        
         async loadClinics() {
             try {
                 const API_URL = 'https://clinic-note-api.onrender.com';
                 const authToken = localStorage.getItem('authToken');
                 const basicAuthToken = localStorage.getItem('basicAuthToken');
+                
                 const response = await fetch(`${API_URL}/api/clinics`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`,
                         'X-Basic-Auth': basicAuthToken
                     }
                 });
+                
                 if (response.ok) {
                     this.clinics = await response.json();
                     this.hospitals = [...new Set(this.clinics.map(c => c.hospital_name))];
+                    console.log('Loaded clinics:', this.clinics.length);
                 } else {
                     console.error('Failed to load clinics:', response.status);
+                    this.showToast(this.translations[this.currentLang].loadError, 'danger');
                 }
             } catch (err) {
                 console.error('Load clinics error:', err);
-                this.showError(this.currentLang === 'ja' ? 'クリニックの読み込みに失敗しました' : 'Failed to load clinics');
+                this.showToast(this.translations[this.currentLang].loadError, 'danger');
             }
         },
+        
         onHospitalChange() {
             this.selectedDepartment = '';
             this.departments = this.clinics
                 .filter(c => c.hospital_name === this.selectedHospital)
                 .map(c => c.department);
             this.currentClinicId = null;
+            console.log('Hospital changed:', this.selectedHospital, 'Departments:', this.departments.length);
         },
+        
         async onDepartmentChange() {
-            const clinic = this.clinics.find(c => c.hospital_name === this.selectedHospital && c.department === this.selectedDepartment);
+            const clinic = this.clinics.find(c => 
+                c.hospital_name === this.selectedHospital && 
+                c.department === this.selectedDepartment
+            );
+            
             if (clinic) {
                 this.currentClinicId = clinic.id;
                 console.log('Selected clinic ID:', this.currentClinicId);
+                
                 await this.loadAppointments();
                 await this.loadMemos();
                 this.updateAllMemosList();
                 this.generateCalendar();
             }
         },
+        
         async loadAppointments() {
             try {
                 const API_URL = 'https://clinic-note-api.onrender.com';
                 const authToken = localStorage.getItem('authToken');
                 const basicAuthToken = localStorage.getItem('basicAuthToken');
+                
                 if (!this.currentClinicId) return;
+                
                 const response = await fetch(`${API_URL}/api/appointments?clinic_id=${this.currentClinicId}`, {
                     headers: {
                         'Authorization': `Bearer ${authToken}`,
                         'X-Basic-Auth': basicAuthToken
                     }
                 });
+                
                 if (response.ok) {
                     this.appointments = await response.json();
                     console.log('Loaded appointments:', this.appointments.length);
@@ -680,11 +827,13 @@ function calendarData() {
                 console.error('Load appointments error:', err);
             }
         },
+        
         async loadMemos() {
             try {
                 const API_URL = 'https://clinic-note-api.onrender.com';
                 const authToken = localStorage.getItem('authToken');
                 const basicAuthToken = localStorage.getItem('basicAuthToken');
+                
                 if (!this.currentClinicId) return;
                 
                 const response = await fetch(`${API_URL}/api/appointments/memos?clinic_id=${this.currentClinicId}`, {
@@ -704,6 +853,7 @@ function calendarData() {
                 console.error('Load memos error:', err);
             }
         },
+        
         updateAllMemosList() {
             this.allMemosList = this.memos
                 .filter(m => m.patient_memo || m.doctor_memo)
@@ -714,28 +864,36 @@ function calendarData() {
                     doctor_memo: m.doctor_memo
                 }))
                 .sort((a, b) => new Date(b.memo_date) - new Date(a.memo_date));
+            
             console.log('Updated all memos list:', this.allMemosList.length);
         },
+        
         generateCalendar() {
             const year = this.currentDate.getFullYear();
             const month = this.currentDate.getMonth();
+            
             this.currentMonthYear = `${year}年${month + 1}月`;
             if (this.currentLang === 'en') {
-                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                                  'July', 'August', 'September', 'October', 'November', 'December'];
                 this.currentMonthYear = `${monthNames[month]} ${year}`;
             }
+            
             const firstDay = new Date(year, month, 1);
             const lastDay = new Date(year, month + 1, 0);
             const prevLastDay = new Date(year, month, 0);
             const startDayOfWeek = firstDay.getDay();
             const daysInMonth = lastDay.getDate();
             const daysInPrevMonth = prevLastDay.getDate();
+            
             this.calendarDates = [];
             
+            // 前月の日付
             for (let i = startDayOfWeek - 1; i >= 0; i--) {
                 const day = daysInPrevMonth - i;
                 const date = new Date(year, month - 1, day);
                 const dateStr = this.formatDate(date);
+                
                 this.calendarDates.push({
                     key: `prev-${day}`,
                     day: day,
@@ -746,13 +904,17 @@ function calendarData() {
                     hasMemo: this.memos.some(m => m.memo_date === dateStr && (m.patient_memo || m.doctor_memo))
                 });
             }
+            
             const today = new Date();
+            
+            // 当月の日付
             for (let day = 1; day <= daysInMonth; day++) {
                 const date = new Date(year, month, day);
                 const dateStr = this.formatDate(date);
                 const hasAppointment = this.appointments.some(a => a.appointment_date === dateStr);
                 const hasMemo = this.memos.some(m => m.memo_date === dateStr && (m.patient_memo || m.doctor_memo));
                 const isToday = date.toDateString() === today.toDateString();
+                
                 this.calendarDates.push({
                     key: `current-${day}`,
                     day: day,
@@ -763,10 +925,13 @@ function calendarData() {
                     hasMemo: hasMemo
                 });
             }
+            
+            // 翌月の日付
             const remainingDays = 42 - this.calendarDates.length;
             for (let day = 1; day <= remainingDays; day++) {
                 const date = new Date(year, month + 1, day);
                 const dateStr = this.formatDate(date);
+                
                 this.calendarDates.push({
                     key: `next-${day}`,
                     day: day,
@@ -777,15 +942,20 @@ function calendarData() {
                     hasMemo: this.memos.some(m => m.memo_date === dateStr && (m.patient_memo || m.doctor_memo))
                 });
             }
+            
+            console.log('Generated calendar dates:', this.calendarDates.length);
         },
+        
         previousMonth() {
             this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() - 1, 1);
             this.generateCalendar();
         },
+        
         nextMonth() {
             this.currentDate = new Date(this.currentDate.getFullYear(), this.currentDate.getMonth() + 1, 1);
             this.generateCalendar();
         },
+        
         async selectDate(dateObj) {
             this.selectedDate = dateObj.date;
             this.selectedDateFormatted = this.formatDateForDisplay(dateObj.date);
@@ -793,6 +963,7 @@ function calendarData() {
             
             console.log('Selecting date:', dateStr);
             
+            // メモを取得
             const memo = this.memos.find(m => m.memo_date === dateStr);
             console.log('Found memo for date:', memo);
             
@@ -808,8 +979,10 @@ function calendarData() {
                 id: this.currentMemoId
             });
             
+            // 通院日チェック
             this.isAppointmentDay = this.appointments.some(a => a.appointment_date === dateStr);
             
+            // 通院日の場合、過去のメモを表示
             if (this.isAppointmentDay) {
                 const allPastMemos = this.memos
                     .filter(m => m.memo_date < dateStr && (m.patient_memo || m.doctor_memo))
@@ -820,6 +993,7 @@ function calendarData() {
                 this.previousMemos = [];
             }
             
+            // メモセクションにスクロール
             setTimeout(() => {
                 const memoSection = document.querySelector('[x-show="selectedDate"]');
                 if (memoSection) {
@@ -827,14 +1001,15 @@ function calendarData() {
                 }
             }, 100);
         },
+        
         async saveMemo() {
             if (!this.selectedDate) {
-                this.showError(this.currentLang === 'ja' ? '日付を選択してください' : 'Please select a date');
+                this.showToast(this.translations[this.currentLang].saveError, 'danger');
                 return;
             }
             
             if (!this.currentClinicId) {
-                this.showError(this.currentLang === 'ja' ? '病院と診療科目を選択してください' : 'Please select hospital and department');
+                this.showToast(this.translations[this.currentLang].saveError, 'danger');
                 return;
             }
             
@@ -842,7 +1017,7 @@ function calendarData() {
             const doctorMemoTrimmed = this.currentDoctorMemo.trim();
             
             if (!patientMemoTrimmed && !doctorMemoTrimmed) {
-                this.showError(this.currentLang === 'ja' ? 'メモを入力してください' : 'Please enter memo');
+                this.showToast(this.translations[this.currentLang].saveError, 'danger');
                 return;
             }
             
@@ -880,30 +1055,33 @@ function calendarData() {
                     const result = await response.json();
                     console.log('Save memo result:', result);
                     
+                    // メモを再読み込み
                     await this.loadMemos();
                     
                     this.hasExistingMemo = true;
                     this.currentMemoId = result.memo?.id || this.currentMemoId;
                     
-                    this.showSuccess(this.currentLang === 'ja' ? 'メモを保存しました' : 'Memo saved');
+                    this.showToast(this.translations[this.currentLang].saveSuccess, 'success');
                     this.updateAllMemosList();
                     this.generateCalendar();
                 } else {
                     const errorData = await response.json();
                     console.error('Save memo error:', errorData);
-                    this.showError(errorData.message || (this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed'));
+                    this.showToast(this.translations[this.currentLang].saveError, 'danger');
                 }
             } catch (err) {
                 console.error('Save memo error:', err);
-                this.showError(this.currentLang === 'ja' ? '保存に失敗しました' : 'Save failed');
+                this.showToast(this.translations[this.currentLang].saveError, 'danger');
             } finally {
                 this.loading = false;
             }
         },
+        
         clearMemo() {
             this.currentPatientMemo = '';
             this.currentDoctorMemo = '';
         },
+        
         async deleteMemo() {
             if (!this.selectedDate) return;
             
@@ -911,6 +1089,7 @@ function calendarData() {
             if (!confirm(confirmMsg)) return;
             
             this.loading = true;
+            
             try {
                 const API_URL = 'https://clinic-note-api.onrender.com';
                 const authToken = localStorage.getItem('authToken');
@@ -935,21 +1114,22 @@ function calendarData() {
                         this.currentDoctorMemo = '';
                         this.hasExistingMemo = false;
                         this.currentMemoId = null;
-                        this.showSuccess(this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted');
+                        this.showToast(this.translations[this.currentLang].deleteSuccess, 'success');
                         this.updateAllMemosList();
                         this.generateCalendar();
                     } else {
                         console.error('Delete failed:', response.status);
-                        this.showError(this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed');
+                        this.showToast(this.translations[this.currentLang].deleteError, 'danger');
                     }
                 }
             } catch (err) {
                 console.error('Delete memo error:', err);
-                this.showError(this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed');
+                this.showToast(this.translations[this.currentLang].deleteError, 'danger');
             } finally {
                 this.loading = false;
             }
         },
+        
         async deleteMemoByDate(dateStr) {
             const confirmMsg = this.currentLang === 'ja' ? 'このメモを削除しますか?' : 'Delete this memo?';
             if (!confirm(confirmMsg)) return;
@@ -971,7 +1151,7 @@ function calendarData() {
                     
                     if (response.ok) {
                         await this.loadMemos();
-                        this.showSuccess(this.currentLang === 'ja' ? 'メモを削除しました' : 'Memo deleted');
+                        this.showToast(this.translations[this.currentLang].deleteSuccess, 'success');
                         this.updateAllMemosList();
                         this.generateCalendar();
                         
@@ -985,9 +1165,10 @@ function calendarData() {
                 }
             } catch (err) {
                 console.error('Delete memo by date error:', err);
-                this.showError(this.currentLang === 'ja' ? '削除に失敗しました' : 'Delete failed');
+                this.showToast(this.translations[this.currentLang].deleteError, 'danger');
             }
         },
+        
         jumpToMemoDate(dateStr) {
             const date = new Date(dateStr);
             this.currentDate = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -1000,25 +1181,30 @@ function calendarData() {
                 }
             }, 100);
         },
+        
         isAppointmentDate(dateStr) {
             return this.appointments.some(a => a.appointment_date === dateStr);
         },
+        
         formatDate(date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             return `${year}-${month}-${day}`;
         },
+        
         formatDateForDisplay(date) {
             if (this.currentLang === 'ja') {
                 return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
             }
             return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         },
+        
         formatMemoDate(dateStr) {
             const date = new Date(dateStr);
             return this.formatDateForDisplay(date);
         },
+        
         getDaysAgo(dateStr) {
             const date = new Date(dateStr);
             const today = new Date();
@@ -1030,22 +1216,7 @@ function calendarData() {
             }
             return `${diffDays} days ago`;
         },
-        showSuccess(message) {
-            this.successMessage = message;
-            this.errorMessage = '';
-            console.log('Success:', message);
-            setTimeout(() => {
-                this.successMessage = '';
-            }, 5000);
-        },
-        showError(message) {
-            this.errorMessage = message;
-            this.successMessage = '';
-            console.error('Error:', message);
-            setTimeout(() => {
-                this.errorMessage = '';
-            }, 5000);
-        },
+        
         async exportData() {
             try {
                 const API_URL = 'https://clinic-note-api.onrender.com';
@@ -1090,18 +1261,20 @@ function calendarData() {
                     }
                     
                     this.showExportDialog = false;
-                    this.showSuccess(this.currentLang === 'ja' ? 'エクスポート完了' : 'Export completed');
+                    this.showToast(this.translations[this.currentLang].exportSuccess, 'success');
                 } else {
-                    this.showError(this.currentLang === 'ja' ? 'エクスポート失敗' : 'Export failed');
+                    this.showToast(this.translations[this.currentLang].exportError, 'danger');
                 }
             } catch (err) {
-                this.showError(this.currentLang === 'ja' ? 'エクスポート失敗' : 'Export failed');
+                this.showToast(this.translations[this.currentLang].exportError, 'danger');
                 console.error('Export error:', err);
             }
         },
+        
         handleFileSelect(event) {
             this.selectedFile = event.target.files[0];
         },
+        
         async importData() {
             if (!this.selectedFile) return;
             
@@ -1173,18 +1346,19 @@ function calendarData() {
                         this.generateCalendar();
                         this.showImportDialog = false;
                         this.selectedFile = null;
-                        this.showSuccess(this.currentLang === 'ja' ? `インポート完了 (${successCount}件)` : `Import completed (${successCount} items)`);
+                        this.showToast(`${this.translations[this.currentLang].importSuccess} (${successCount}件)`, 'success');
                     } catch (err) {
-                        this.showError(this.currentLang === 'ja' ? 'インポート失敗' : 'Import failed');
+                        this.showToast(this.translations[this.currentLang].importError, 'danger');
                         console.error('Import parse error:', err);
                     }
                 };
                 reader.readAsText(this.selectedFile);
             } catch (err) {
-                this.showError(this.currentLang === 'ja' ? 'ファイル読み込み失敗' : 'File read failed');
+                this.showToast(this.translations[this.currentLang].importError, 'danger');
                 console.error('Import error:', err);
             }
         },
+        
         async printMemos() {
             try {
                 const API_URL = 'https://clinic-note-api.onrender.com';
@@ -1228,17 +1402,42 @@ function calendarData() {
                     window.print();
                     printArea.classList.add('hidden');
                     this.showPrintDialog = false;
+                    this.showToast(this.translations[this.currentLang].printSuccess, 'success');
                 } else {
-                    this.showError(this.currentLang === 'ja' ? '印刷失敗' : 'Print failed');
+                    this.showToast(this.translations[this.currentLang].exportError, 'danger');
                 }
             } catch (err) {
-                this.showError(this.currentLang === 'ja' ? '印刷失敗' : 'Print failed');
+                this.showToast(this.translations[this.currentLang].exportError, 'danger');
                 console.error('Print error:', err);
             }
         },
+        
+        printSingleMemo() {
+            if (!this.selectedDate) return;
+            
+            const printArea = document.getElementById('printArea');
+            const dateStr = this.formatDate(this.selectedDate);
+            
+            let html = `
+                <h1 style="color: #1e293b; font-size: 24px; font-weight: bold; margin-bottom: 16px;">${this.selectedHospital} - ${this.selectedDepartment}</h1>
+                <h2 style="color: #374151; font-size: 20px; font-weight: bold; margin-bottom: 12px;">${this.currentLang === 'ja' ? 'メモ' : 'Memo'} - ${this.selectedDateFormatted}</h2>
+                <p style="color: #6b7280; margin-bottom: 16px;">${this.currentLang === 'ja' ? '印刷日' : 'Printed on'}: ${new Date().toLocaleDateString()}</p>
+                <hr style="border-color: #d1d5db; margin-bottom: 16px;">
+                <div style="color: #1f2937;">
+                    ${this.currentPatientMemo ? `<p style="margin-bottom: 16px;"><strong style="color: #374151;">${this.currentLang === 'ja' ? '患者メモ' : 'Patient Memo'}:</strong><br><span style="color: #6b7280; white-space: pre-wrap;">${this.currentPatientMemo}</span></p>` : ''}
+                    ${this.currentDoctorMemo ? `<p><strong style="color: #374151;">${this.currentLang === 'ja' ? '医師診断メモ' : 'Doctor Diagnosis'}:</strong><br><span style="color: #6b7280; white-space: pre-wrap;">${this.currentDoctorMemo}</span></p>` : ''}
+                </div>
+            `;
+            
+            printArea.innerHTML = html;
+            printArea.classList.remove('hidden');
+            window.print();
+            printArea.classList.add('hidden');
+        },
+        
         async sendEmail() {
             if (!this.emailAddress) {
-                this.showError(this.currentLang === 'ja' ? 'メールアドレスを入力してください' : 'Please enter email address');
+                this.showToast(this.translations[this.currentLang].saveError, 'danger');
                 return;
             }
             
@@ -1273,14 +1472,31 @@ function calendarData() {
                     window.location.href = mailtoLink;
                     
                     this.showEmailDialog = false;
-                    this.showSuccess(this.currentLang === 'ja' ? 'メールアプリを開きました' : 'Email app opened');
+                    this.showToast(this.translations[this.currentLang].emailSuccess, 'success');
                 } else {
-                    this.showError(this.currentLang === 'ja' ? 'メール送信失敗' : 'Email send failed');
+                    this.showToast(this.translations[this.currentLang].exportError, 'danger');
                 }
             } catch (err) {
-                this.showError(this.currentLang === 'ja' ? 'メール送信失敗' : 'Email send failed');
+                this.showToast(this.translations[this.currentLang].exportError, 'danger');
                 console.error('Email error:', err);
             }
+        },
+        
+        emailSingleMemo() {
+            if (!this.emailAddress) {
+                // 簡易的にメールアドレスを入力してもらう
+                const email = prompt(this.currentLang === 'ja' ? 'メールアドレスを入力してください:' : 'Enter email address:');
+                if (!email) return;
+                this.emailAddress = email;
+            }
+            
+            let emailBody = `${this.selectedHospital} - ${this.selectedDepartment}\n`;
+            emailBody += `Date: ${this.selectedDateFormatted}\n\n`;
+            if (this.currentPatientMemo) emailBody += `Patient Memo:\n${this.currentPatientMemo}\n\n`;
+            if (this.currentDoctorMemo) emailBody += `Doctor Diagnosis:\n${this.currentDoctorMemo}\n\n`;
+            
+            const mailtoLink = `mailto:${this.emailAddress}?subject=${encodeURIComponent('Clinic Memo - ' + this.selectedDateFormatted)}&body=${encodeURIComponent(emailBody)}`;
+            window.location.href = mailtoLink;
         }
     };
 }

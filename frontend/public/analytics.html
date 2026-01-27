@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="/custom.css">
     <style>
+        /* 全てのカード・枠の背景色を白に統一、文字色を黒に統一 */
         sl-card {
             background-color: #ffffff !important;
         }
@@ -30,6 +31,7 @@
             background-color: #ffffff !important;
         }
         
+        /* 全てのテキスト要素を黒系に統一 */
         h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
             color: #1f2937 !important;
         }
@@ -38,8 +40,19 @@
             color: #1f2937 !important;
         }
         
-        .text-blue-500, .text-green-500, .text-purple-500 {
-            color: inherit !important;
+        /* 統計カードの色指定を削除し、背景白・文字黒に統一 */
+        .stats-card {
+            background-color: #ffffff !important;
+        }
+        
+        .stats-card .text-3xl,
+        .stats-card .text-2xl,
+        .stats-card .text-lg,
+        .stats-card div,
+        .stats-card p,
+        .stats-card span,
+        .stats-card strong {
+            color: #1f2937 !important;
         }
         
         sl-card .text-3xl,
@@ -56,12 +69,26 @@
             position: relative;
             width: 100%;
             height: 400px;
+            background-color: #ffffff !important;
         }
         
         @media (max-width: 768px) {
             .chart-container {
                 height: 300px;
             }
+            
+            /* モバイル端末でも背景色・文字色を明確に */
+            .stats-card {
+                background-color: #ffffff !important;
+            }
+            
+            .stats-card * {
+                color: #1f2937 !important;
+            }
+        }
+        
+        canvas {
+            background-color: #ffffff !important;
         }
     </style>
 </head>
@@ -70,8 +97,8 @@
         <!-- Header -->
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
-                <h1 class="text-4xl font-bold text-indigo-900" x-text="translations[currentLang].title"></h1>
-                <p class="text-gray-600 mt-2" x-text="translations[currentLang].subtitle"></p>
+                <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
+                <p class="text-gray-700 mt-2" x-text="translations[currentLang].subtitle"></p>
             </div>
             <div class="flex gap-2">
                 <sl-button-group label="Language">
@@ -91,83 +118,89 @@
         <!-- Loading State -->
         <div x-show="loading" class="text-center py-12">
             <sl-spinner style="font-size: 3rem;"></sl-spinner>
-            <p class="mt-4 text-gray-600" x-text="translations[currentLang].loading"></p>
+            <p class="mt-4 text-gray-700" x-text="translations[currentLang].loading"></p>
         </div>
 
         <!-- Statistics Cards -->
         <div x-show="!loading" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8" data-aos="fade-up">
-            <sl-card>
-                <div class="text-center p-4">
-                    <span class="iconify text-5xl text-blue-500 mb-3" data-icon="mdi:hospital-building"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalClinics"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalClinics"></div>
+            <sl-card class="stats-card">
+                <div class="text-center p-4" style="background-color: #ffffff !important;">
+                    <span class="iconify text-5xl mb-3" data-icon="mdi:hospital-building" style="color: #3b82f6;"></span>
+                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalClinics" style="color: #1f2937 !important;"></div>
+                    <div class="text-gray-700 mt-2" x-text="translations[currentLang].totalClinics" style="color: #1f2937 !important;"></div>
                 </div>
             </sl-card>
-            <sl-card>
-                <div class="text-center p-4">
-                    <span class="iconify text-5xl text-green-500 mb-3" data-icon="mdi:calendar-check"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalAppointments"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalAppointments"></div>
+            <sl-card class="stats-card">
+                <div class="text-center p-4" style="background-color: #ffffff !important;">
+                    <span class="iconify text-5xl mb-3" data-icon="mdi:calendar-check" style="color: #10b981;"></span>
+                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalAppointments" style="color: #1f2937 !important;"></div>
+                    <div class="text-gray-700 mt-2" x-text="translations[currentLang].totalAppointments" style="color: #1f2937 !important;"></div>
                 </div>
             </sl-card>
-            <sl-card>
-                <div class="text-center p-4">
-                    <span class="iconify text-5xl text-purple-500 mb-3" data-icon="mdi:note-multiple"></span>
-                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalMemos"></div>
-                    <div class="text-gray-600 mt-2" x-text="translations[currentLang].totalMemos"></div>
+            <sl-card class="stats-card">
+                <div class="text-center p-4" style="background-color: #ffffff !important;">
+                    <span class="iconify text-5xl mb-3" data-icon="mdi:note-multiple" style="color: #a855f7;"></span>
+                    <div class="text-3xl font-bold text-gray-800" x-text="stats.totalMemos" style="color: #1f2937 !important;"></div>
+                    <div class="text-gray-700 mt-2" x-text="translations[currentLang].totalMemos" style="color: #1f2937 !important;"></div>
                 </div>
             </sl-card>
         </div>
 
         <!-- Charts -->
-        <div x-show="!loading" class="space-y-8">
+        <div x-show="!loading && chartData" class="space-y-8">
             <!-- Appointments by Department -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="200">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="200" style="background-color: #ffffff !important;">
+                <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800" style="color: #1f2937 !important;">
                     <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-bar"></span>
                     <span x-text="translations[currentLang].appointmentsByDept"></span>
                 </h2>
-                <canvas id="departmentChart"></canvas>
+                <div class="chart-container">
+                    <canvas id="departmentChart"></canvas>
+                </div>
             </div>
 
             <!-- Appointment Frequency -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="400">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="400" style="background-color: #ffffff !important;">
+                <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800" style="color: #1f2937 !important;">
                     <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-line"></span>
                     <span x-text="translations[currentLang].appointmentFrequency"></span>
                 </h2>
-                <canvas id="frequencyChart"></canvas>
+                <div class="chart-container">
+                    <canvas id="frequencyChart"></canvas>
+                </div>
             </div>
 
-            <!-- Department Analysis -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="600">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <!-- Department Distribution -->
+            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="600" style="background-color: #ffffff !important;">
+                <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800" style="color: #1f2937 !important;">
                     <span class="iconify text-indigo-600 mr-2" data-icon="mdi:chart-pie"></span>
                     <span x-text="translations[currentLang].departmentDistribution"></span>
                 </h2>
-                <canvas id="pieChart"></canvas>
+                <div class="chart-container">
+                    <canvas id="pieChart"></canvas>
+                </div>
             </div>
 
             <!-- Trends Analysis -->
-            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="800">
-                <h2 class="text-2xl font-bold mb-6 flex items-center">
+            <div class="bg-white rounded-2xl shadow-xl p-6" data-aos="fade-up" data-aos-delay="800" style="background-color: #ffffff !important;">
+                <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800" style="color: #1f2937 !important;">
                     <span class="iconify text-indigo-600 mr-2" data-icon="mdi:trending-up"></span>
                     <span x-text="translations[currentLang].trends"></span>
                 </h2>
                 <div class="space-y-4">
                     <template x-for="trend in trends" :key="trend.department">
-                        <sl-card>
-                            <div class="p-4">
+                        <sl-card style="background-color: #ffffff !important;">
+                            <div class="p-4" style="background-color: #ffffff !important;">
                                 <div class="flex justify-between items-center mb-2">
-                                    <h3 class="text-lg font-bold" x-text="trend.department"></h3>
+                                    <h3 class="text-lg font-bold text-gray-800" x-text="trend.department" style="color: #1f2937 !important;"></h3>
                                     <sl-badge :variant="trend.trend === 'increasing' ? 'danger' : trend.trend === 'stable' ? 'primary' : 'success'">
                                         <span x-text="translations[currentLang][trend.trend]"></span>
                                     </sl-badge>
                                 </div>
-                                <div class="text-gray-600">
-                                    <p><strong x-text="translations[currentLang].visitCount"></strong>: <span x-text="trend.count"></span></p>
-                                    <p><strong x-text="translations[currentLang].avgInterval"></strong>: <span x-text="trend.avgInterval"></span> <span x-text="translations[currentLang].days"></span></p>
-                                    <p class="mt-2" x-text="trend.analysis"></p>
+                                <div class="text-gray-700" style="color: #1f2937 !important;">
+                                    <p style="color: #1f2937 !important;"><strong x-text="translations[currentLang].visitCount" style="color: #1f2937 !important;"></strong>: <span x-text="trend.count"></span></p>
+                                    <p style="color: #1f2937 !important;"><strong x-text="translations[currentLang].avgInterval" style="color: #1f2937 !important;"></strong>: <span x-text="trend.avgInterval"></span> <span x-text="translations[currentLang].days"></span></p>
+                                    <p class="mt-2" x-text="trend.analysis" style="color: #1f2937 !important;"></p>
                                 </div>
                             </div>
                         </sl-card>
@@ -179,6 +212,17 @@
 
     <script src="/analytics.js"></script>
     <script>
+        // チャートインスタンスを管理
+        let chartInstances = {};
+        
+        function destroyChart(chartId) {
+            if (chartInstances[chartId]) {
+                chartInstances[chartId].destroy();
+                delete chartInstances[chartId];
+                console.log(`Destroyed chart: ${chartId}`);
+            }
+        }
+        
         function analyticsData() {
             return {
                 currentLang: 'ja',
@@ -189,7 +233,7 @@
                     totalMemos: 0
                 },
                 trends: [],
-                charts: {},
+                chartData: null,
                 translations: {
                     ja: {
                         title: 'データ分析',
@@ -228,53 +272,82 @@
                         days: 'days'
                     }
                 },
+                
                 async init() {
                     const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
                     this.currentLang = savedLang;
+                    
                     const authToken = localStorage.getItem('authToken');
                     if (!authToken) {
                         window.location.href = '/login.html';
                         return;
                     }
+                    
                     AOS.init({ duration: 1000, once: true });
                     await this.loadAnalytics();
                     this.loading = false;
+                    
+                    // チャートを作成
                     this.$nextTick(() => {
                         this.createCharts();
                     });
                 },
+                
                 switchLanguage(lang) {
                     this.currentLang = lang;
                     localStorage.setItem('clinicNoteLang', lang);
                     this.updateCharts();
                 },
+                
                 async loadAnalytics() {
                     try {
                         const API_URL = 'https://clinic-note-api.onrender.com';
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
                         const response = await fetch(`${API_URL}/api/analytics`, {
                             headers: {
                                 'Authorization': `Bearer ${authToken}`,
                                 'X-Basic-Auth': basicAuthToken
                             }
                         });
+                        
                         if (response.ok) {
                             const data = await response.json();
                             this.stats = data.stats;
                             this.trends = data.trends;
                             this.chartData = data.chartData;
+                            
+                            console.log('Loaded analytics:', {
+                                stats: this.stats,
+                                trendsCount: this.trends.length,
+                                chartData: this.chartData
+                            });
+                        } else {
+                            console.error('Failed to load analytics:', response.status);
                         }
                     } catch (err) {
                         console.error('Load analytics error:', err);
                     }
                 },
+                
                 createCharts() {
-                    if (!this.chartData) return;
+                    if (!this.chartData) {
+                        console.log('No chart data available');
+                        return;
+                    }
                     
+                    console.log('Creating charts with data:', this.chartData);
+                    
+                    // 既存のチャートを破棄
+                    destroyChart('department');
+                    destroyChart('frequency');
+                    destroyChart('pie');
+                    
+                    // 診療科目別通院回数チャート
                     const ctx1 = document.getElementById('departmentChart');
-                    if (ctx1) {
-                        this.charts.department = new Chart(ctx1, {
+                    if (ctx1 && this.chartData.departments && this.chartData.departments.length > 0) {
+                        chartInstances.department = new Chart(ctx1, {
                             type: 'bar',
                             data: {
                                 labels: this.chartData.departments,
@@ -290,18 +363,35 @@
                                 responsive: true,
                                 maintainAspectRatio: true,
                                 plugins: {
-                                    legend: { display: true }
+                                    legend: { 
+                                        display: true,
+                                        labels: {
+                                            color: '#1f2937'
+                                        }
+                                    }
                                 },
                                 scales: {
-                                    y: { beginAtZero: true }
+                                    y: { 
+                                        beginAtZero: true,
+                                        ticks: {
+                                            color: '#1f2937'
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            color: '#1f2937'
+                                        }
+                                    }
                                 }
                             }
                         });
+                        console.log('Created department chart');
                     }
 
+                    // 月別通院頻度チャート
                     const ctx2 = document.getElementById('frequencyChart');
-                    if (ctx2) {
-                        this.charts.frequency = new Chart(ctx2, {
+                    if (ctx2 && this.chartData.months && this.chartData.months.length > 0) {
+                        chartInstances.frequency = new Chart(ctx2, {
                             type: 'line',
                             data: {
                                 labels: this.chartData.months,
@@ -318,18 +408,35 @@
                                 responsive: true,
                                 maintainAspectRatio: true,
                                 plugins: {
-                                    legend: { display: true }
+                                    legend: { 
+                                        display: true,
+                                        labels: {
+                                            color: '#1f2937'
+                                        }
+                                    }
                                 },
                                 scales: {
-                                    y: { beginAtZero: true }
+                                    y: { 
+                                        beginAtZero: true,
+                                        ticks: {
+                                            color: '#1f2937'
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            color: '#1f2937'
+                                        }
+                                    }
                                 }
                             }
                         });
+                        console.log('Created frequency chart');
                     }
 
+                    // 診療科目の割合チャート
                     const ctx3 = document.getElementById('pieChart');
-                    if (ctx3) {
-                        this.charts.pie = new Chart(ctx3, {
+                    if (ctx3 && this.chartData.departments && this.chartData.departments.length > 0) {
+                        chartInstances.pie = new Chart(ctx3, {
                             type: 'pie',
                             data: {
                                 labels: this.chartData.departments,
@@ -343,6 +450,14 @@
                                         'rgba(236, 72, 153, 0.7)',
                                         'rgba(59, 130, 246, 0.7)'
                                     ],
+                                    borderColor: [
+                                        'rgba(99, 102, 241, 1)',
+                                        'rgba(34, 197, 94, 1)',
+                                        'rgba(168, 85, 247, 1)',
+                                        'rgba(251, 146, 60, 1)',
+                                        'rgba(236, 72, 153, 1)',
+                                        'rgba(59, 130, 246, 1)'
+                                    ],
                                     borderWidth: 2
                                 }]
                             },
@@ -350,20 +465,28 @@
                                 responsive: true,
                                 maintainAspectRatio: true,
                                 plugins: {
-                                    legend: { position: 'right' }
+                                    legend: { 
+                                        position: 'right',
+                                        labels: {
+                                            color: '#1f2937'
+                                        }
+                                    }
                                 }
                             }
                         });
+                        console.log('Created pie chart');
                     }
                 },
+                
                 updateCharts() {
-                    if (this.charts.department) {
-                        this.charts.department.data.datasets[0].label = this.translations[this.currentLang].totalAppointments;
-                        this.charts.department.update();
+                    if (chartInstances.department) {
+                        chartInstances.department.data.datasets[0].label = this.translations[this.currentLang].totalAppointments;
+                        chartInstances.department.update();
                     }
-                    if (this.charts.frequency) {
-                        this.charts.frequency.data.datasets[0].label = this.translations[this.currentLang].totalAppointments;
-                        this.charts.frequency.update();
+                    
+                    if (chartInstances.frequency) {
+                        chartInstances.frequency.data.datasets[0].label = this.translations[this.currentLang].totalAppointments;
+                        chartInstances.frequency.update();
                     }
                 }
             };
