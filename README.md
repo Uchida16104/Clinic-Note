@@ -310,6 +310,9 @@ CREATE TABLE memos (
 - ✅ Offline capability (IndexedDB/PouchDB)
 - ✅ Data synchronization
 
+## Caution
+- ***You need to update and reflect PostgreSQL on Render if you have a free plan.***
+
 ## License
 
 MIT License
