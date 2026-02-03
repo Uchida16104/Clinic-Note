@@ -289,19 +289,45 @@ router.post('/memos', async (req, res) => {
             });
         }
         
-        const { data, error } = await supabase
+        const { data: existingMemo, error: checkError } = await supabase
             .from('memos')
-            .upsert({
-                user_id: userId,
-                clinic_id: clinic_id,
-                memo_date: memo_date,
-                patient_memo: patient_memo || null,
-                doctor_memo: doctor_memo || null
-            }, {
-                onConflict: 'user_id,clinic_id,memo_date'
-            })
-            .select()
-            .single();
+            .select('id')
+            .eq('user_id', userId)
+            .eq('clinic_id', clinic_id)
+            .eq('memo_date', memo_date)
+            .maybeSingle();
+        
+        let data, error;
+        
+        if (existingMemo) {
+            const updateResult = await supabase
+                .from('memos')
+                .update({
+                    patient_memo: patient_memo || null,
+                    doctor_memo: doctor_memo || null
+                })
+                .eq('id', existingMemo.id)
+                .select()
+                .single();
+            
+            data = updateResult.data;
+            error = updateResult.error;
+        } else {
+            const insertResult = await supabase
+                .from('memos')
+                .insert({
+                    user_id: userId,
+                    clinic_id: clinic_id,
+                    memo_date: memo_date,
+                    patient_memo: patient_memo || null,
+                    doctor_memo: doctor_memo || null
+                })
+                .select()
+                .single();
+            
+            data = insertResult.data;
+            error = insertResult.error;
+        }
         
         if (error) {
             throw error;
