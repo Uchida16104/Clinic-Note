@@ -12,4 +12,4 @@ jobs:
       - name: Ping Render backend
         run: |
           curl -s -o /dev/null -w "%{http_code}\n" \
-          https://clinic-note-api.onrender.com/health
+          https://clinic-note-api.onrender.com/api/health
