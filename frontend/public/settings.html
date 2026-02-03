@@ -3,399 +3,383 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>設定 - Clinic Note</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Clinic Note - 通知設定</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <style>
+        sl-input::part(base), sl-textarea::part(base), sl-select::part(combobox) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-input::part(input), sl-textarea::part(textarea) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-card {
+            background-color: #ffffff !important;
+        }
+        sl-card::part(base) {
+            background-color: #ffffff !important;
+        }
+        h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
+            color: #1f2937 !important;
+        }
+    </style>
 </head>
-<body class="bg-gray-50">
-    <nav class="bg-indigo-600 text-white shadow-lg">
-        <div class="container mx-auto px-4 py-4">
-            <div class="flex items-center justify-between">
-                <h1 class="text-2xl font-bold flex items-center">
-                    <i class="fas fa-clinic-medical mr-2"></i>
-                    Clinic Note
-                </h1>
-                <div class="flex items-center space-x-4">
-                    <span id="usernameDisplay" class="text-sm"></span>
-                    <button onclick="logout()" class="bg-indigo-700 hover:bg-indigo-800 px-4 py-2 rounded transition">
-                        <i class="fas fa-sign-out-alt mr-1"></i>ログアウト
-                    </button>
-                </div>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div x-data="notificationSettings()" x-init="init()" class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8" data-aos="fade-down">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
+                <p class="mt-2 text-gray-700" x-text="translations[currentLang].subtitle"></p>
+            </div>
+            <div class="flex gap-2">
+                <sl-button-group label="Language">
+                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                        <span class="iconify" data-icon="twemoji:flag-japan"></span>
+                    </sl-button>
+                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                        <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                    </sl-button>
+                </sl-button-group>
+                <sl-button variant="default" @click="window.location.href='/dashboard.html'">
+                    <span class="iconify" data-icon="mdi:arrow-left"></span>
+                </sl-button>
             </div>
         </div>
-    </nav>
 
-    <div class="container mx-auto px-4 py-8">
-        <div class="mb-6">
-            <a href="dashboard.html" class="text-indigo-600 hover:text-indigo-800 flex items-center">
-                <i class="fas fa-arrow-left mr-2"></i>ダッシュボードに戻る
-            </a>
-        </div>
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-2xl mx-auto" data-aos="fade-up">
+            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''">
+                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                <span x-text="successMessage"></span>
+            </sl-alert>
 
-        <div class="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">
-                <i class="fas fa-cog mr-2"></i>設定
-            </h2>
-
-            <div id="messageContainer" class="mb-4"></div>
+            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''">
+                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
+                <span x-text="errorMessage"></span>
+            </sl-alert>
 
             <div class="space-y-6">
-                <div class="border-b pb-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4">
-                        <i class="fas fa-globe mr-2"></i>タイムゾーン設定
-                    </h3>
-                    <div>
-                        <label for="timezone" class="block text-sm font-medium text-gray-700 mb-2">
-                            タイムゾーン
-                        </label>
-                        <select id="timezone" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        </select>
-                        <p class="mt-2 text-sm text-gray-500">
-                            カレンダーや通知で使用される標準時を設定します
-                        </p>
-                    </div>
-                    <button onclick="saveTimezone()" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition">
-                        <i class="fas fa-save mr-2"></i>タイムゾーンを保存
-                    </button>
-                </div>
-
-                <div class="border-b pb-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4">
-                        <i class="fas fa-envelope mr-2"></i>メール設定
-                    </h3>
-                    <div>
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-                            メールアドレス
-                        </label>
-                        <input type="email" id="email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" placeholder="例: user@example.com">
-                        <p class="mt-2 text-sm text-gray-500">
-                            通院予定のリマインダーメールを受信するためのメールアドレスを設定します
-                        </p>
-                    </div>
-                    <button onclick="saveEmail()" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition">
-                        <i class="fas fa-save mr-2"></i>メールアドレスを保存
-                    </button>
-                </div>
-
-                <div class="border-b pb-6">
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4">
-                        <i class="fas fa-bell mr-2"></i>通知設定
-                    </h3>
-                    <div>
-                        <label for="notificationDays" class="block text-sm font-medium text-gray-700 mb-2">
-                            通院予定日の何日前に通知するか
-                        </label>
-                        <input type="number" id="notificationDays" min="0" max="30" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                        <p class="mt-2 text-sm text-gray-500">
-                            0から30の範囲で指定してください（デフォルト: 1日前）
-                        </p>
-                    </div>
-                    <button onclick="saveNotificationSettings()" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition">
-                        <i class="fas fa-save mr-2"></i>通知設定を保存
-                    </button>
+                <div>
+                    <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
+                        <span class="iconify text-indigo-600 mr-2" data-icon="mdi:email"></span>
+                        <span x-text="translations[currentLang].emailSettings"></span>
+                    </h2>
+                    <sl-input 
+                        x-model="settings.email" 
+                        type="email"
+                        :label="translations[currentLang].emailLabel"
+                        :placeholder="translations[currentLang].emailPlaceholder"
+                        size="large">
+                        <span slot="prefix" class="iconify" data-icon="mdi:email"></span>
+                    </sl-input>
+                    <small class="text-gray-500" x-text="translations[currentLang].emailHint"></small>
                 </div>
 
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-700 mb-4">
-                        <i class="fas fa-mobile-alt mr-2"></i>プッシュ通知
-                    </h3>
-                    <div id="pushNotificationStatus" class="mb-4">
-                        <p class="text-sm text-gray-600">プッシュ通知の状態を確認中...</p>
+                    <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
+                        <span class="iconify text-indigo-600 mr-2" data-icon="mdi:clock-alert"></span>
+                        <span x-text="translations[currentLang].reminderSettings"></span>
+                    </h2>
+                    <sl-select 
+                        x-model="settings.notification_days_before"
+                        :label="translations[currentLang].reminderDaysLabel"
+                        size="large">
+                        <sl-option value="0" x-text="translations[currentLang].sameDay"></sl-option>
+                        <sl-option value="1" x-text="translations[currentLang].oneDayBefore"></sl-option>
+                        <sl-option value="2" x-text="translations[currentLang].twoDaysBefore"></sl-option>
+                        <sl-option value="3" x-text="translations[currentLang].threeDaysBefore"></sl-option>
+                        <sl-option value="7" x-text="translations[currentLang].oneWeekBefore"></sl-option>
+                    </sl-select>
+                    <small class="text-gray-500" x-text="translations[currentLang].reminderHint"></small>
+                </div>
+
+                <div>
+                    <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
+                        <span class="iconify text-indigo-600 mr-2" data-icon="mdi:bell"></span>
+                        <span x-text="translations[currentLang].pushSettings"></span>
+                    </h2>
+                    <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                        <div>
+                            <p class="font-medium text-gray-800" x-text="translations[currentLang].pushNotifications"></p>
+                            <p class="text-sm text-gray-500" x-text="translations[currentLang].pushDescription"></p>
+                        </div>
+                        <sl-switch 
+                            x-model="settings.push_enabled"
+                            @sl-change="togglePushNotifications()"
+                            :disabled="loading">
+                        </sl-switch>
                     </div>
-                    <button id="enablePushButton" onclick="enablePushNotifications()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition mr-2 hidden">
-                        <i class="fas fa-bell mr-2"></i>プッシュ通知を有効にする
-                    </button>
-                    <button id="disablePushButton" onclick="disablePushNotifications()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition hidden">
-                        <i class="fas fa-bell-slash mr-2"></i>プッシュ通知を無効にする
-                    </button>
+                </div>
+
+                <div class="pt-4">
+                    <sl-button 
+                        variant="primary" 
+                        size="large" 
+                        class="w-full"
+                        :loading="loading"
+                        @click="saveSettings()">
+                        <span class="iconify mr-2" data-icon="mdi:content-save"></span>
+                        <span x-text="translations[currentLang].save"></span>
+                    </sl-button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="js/timezone-utils.js"></script>
     <script>
-        const API_URL = 'https://clinic-note-api.onrender.com';
-        let currentUser = null;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            checkAuth();
-            loadTimezones();
-            checkPushNotificationStatus();
-        });
-
-        function loadTimezones() {
-            const timezoneSelect = document.getElementById('timezone');
-            const timezones = getTimezoneList();
-            
-            timezones.forEach(tz => {
-                const option = document.createElement('option');
-                option.value = tz.value;
-                option.textContent = tz.label;
-                timezoneSelect.appendChild(option);
-            });
-        }
-
-        async function checkAuth() {
-            const token = localStorage.getItem('token');
-            
-            if (!token) {
-                window.location.href = 'login.html';
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/api/auth/verify`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+        function notificationSettings() {
+            return {
+                currentLang: 'ja',
+                loading: false,
+                successMessage: '',
+                errorMessage: '',
+                settings: {
+                    email: '',
+                    notification_days_before: '1',
+                    push_enabled: false
+                },
+                translations: {
+                    ja: {
+                        title: '通知設定',
+                        subtitle: 'リマインダー通知の設定',
+                        emailSettings: 'メール通知',
+                        emailLabel: 'メールアドレス',
+                        emailPlaceholder: 'example@example.com',
+                        emailHint: '通院リマインダーを受け取るメールアドレスを入力してください',
+                        reminderSettings: 'リマインダー設定',
+                        reminderDaysLabel: '何日前に通知するか',
+                        sameDay: '当日',
+                        oneDayBefore: '1日前',
+                        twoDaysBefore: '2日前',
+                        threeDaysBefore: '3日前',
+                        oneWeekBefore: '1週間前',
+                        reminderHint: '通院予定日の何日前にリマインダーを受け取るか選択してください',
+                        pushSettings: 'プッシュ通知',
+                        pushNotifications: 'プッシュ通知',
+                        pushDescription: 'ブラウザのプッシュ通知を有効にする',
+                        save: '保存',
+                        saveSuccess: '設定を保存しました',
+                        saveError: '設定の保存に失敗しました',
+                        pushEnableSuccess: 'プッシュ通知を有効にしました',
+                        pushDisableSuccess: 'プッシュ通知を無効にしました',
+                        pushError: 'プッシュ通知の設定に失敗しました',
+                        pushNotSupported: 'このブラウザはプッシュ通知に対応していません'
+                    },
+                    en: {
+                        title: 'Notification Settings',
+                        subtitle: 'Configure Reminder Notifications',
+                        emailSettings: 'Email Notifications',
+                        emailLabel: 'Email Address',
+                        emailPlaceholder: 'example@example.com',
+                        emailHint: 'Enter the email address to receive appointment reminders',
+                        reminderSettings: 'Reminder Settings',
+                        reminderDaysLabel: 'Notify me',
+                        sameDay: 'On the day',
+                        oneDayBefore: '1 day before',
+                        twoDaysBefore: '2 days before',
+                        threeDaysBefore: '3 days before',
+                        oneWeekBefore: '1 week before',
+                        reminderHint: 'Choose when to receive reminders before your appointments',
+                        pushSettings: 'Push Notifications',
+                        pushNotifications: 'Push Notifications',
+                        pushDescription: 'Enable browser push notifications',
+                        save: 'Save Settings',
+                        saveSuccess: 'Settings saved successfully',
+                        saveError: 'Failed to save settings',
+                        pushEnableSuccess: 'Push notifications enabled',
+                        pushDisableSuccess: 'Push notifications disabled',
+                        pushError: 'Failed to configure push notifications',
+                        pushNotSupported: 'Push notifications are not supported in this browser'
                     }
-                });
-
-                if (!response.ok) {
-                    throw new Error('認証に失敗しました');
-                }
-
-                const data = await response.json();
-                currentUser = data.user;
+                },
                 
-                document.getElementById('usernameDisplay').textContent = currentUser.username;
-                
-                if (currentUser.timezone) {
-                    document.getElementById('timezone').value = currentUser.timezone;
-                    setUserTimezone(currentUser.timezone);
-                }
-                
-                if (currentUser.email) {
-                    document.getElementById('email').value = currentUser.email;
-                }
-                
-                if (currentUser.notification_days_before !== undefined) {
-                    document.getElementById('notificationDays').value = currentUser.notification_days_before;
-                }
-
-            } catch (error) {
-                console.error('Auth check error:', error);
-                localStorage.removeItem('token');
-                window.location.href = 'login.html';
-            }
-        }
-
-        function showMessage(message, type = 'success') {
-            const container = document.getElementById('messageContainer');
-            const alertClass = type === 'success' ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700';
-            
-            container.innerHTML = `
-                <div class="${alertClass} border px-4 py-3 rounded relative" role="alert">
-                    <span class="block sm:inline">${message}</span>
-                </div>
-            `;
-            
-            setTimeout(() => {
-                container.innerHTML = '';
-            }, 3000);
-        }
-
-        async function saveTimezone() {
-            const token = localStorage.getItem('token');
-            const timezone = document.getElementById('timezone').value;
-
-            if (!timezone) {
-                showMessage('タイムゾーンを選択してください', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/api/users/timezone`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ timezone })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'タイムゾーンの保存に失敗しました');
-                }
-
-                setUserTimezone(timezone);
-                currentUser.timezone = timezone;
-                showMessage('タイムゾーンを保存しました');
-            } catch (error) {
-                console.error('Save timezone error:', error);
-                showMessage(error.message, 'error');
-            }
-        }
-
-        async function saveEmail() {
-            const token = localStorage.getItem('token');
-            const email = document.getElementById('email').value;
-
-            try {
-                const response = await fetch(`${API_URL}/api/users/profile`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ email })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'メールアドレスの保存に失敗しました');
-                }
-
-                currentUser.email = email;
-                showMessage('メールアドレスを保存しました');
-            } catch (error) {
-                console.error('Save email error:', error);
-                showMessage(error.message, 'error');
-            }
-        }
-
-        async function saveNotificationSettings() {
-            const token = localStorage.getItem('token');
-            const notificationDays = parseInt(document.getElementById('notificationDays').value);
-
-            if (isNaN(notificationDays) || notificationDays < 0 || notificationDays > 30) {
-                showMessage('通知日数は0から30の範囲で指定してください', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_URL}/api/users/profile`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ notification_days_before: notificationDays })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(data.error || '通知設定の保存に失敗しました');
-                }
-
-                currentUser.notification_days_before = notificationDays;
-                showMessage('通知設定を保存しました');
-            } catch (error) {
-                console.error('Save notification settings error:', error);
-                showMessage(error.message, 'error');
-            }
-        }
-
-        async function checkPushNotificationStatus() {
-            const statusDiv = document.getElementById('pushNotificationStatus');
-            const enableButton = document.getElementById('enablePushButton');
-            const disableButton = document.getElementById('disablePushButton');
-
-            if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-                statusDiv.innerHTML = '<p class="text-sm text-gray-600">このブラウザはプッシュ通知をサポートしていません</p>';
-                return;
-            }
-
-            const permission = Notification.permission;
-
-            if (permission === 'granted') {
-                statusDiv.innerHTML = '<p class="text-sm text-green-600"><i class="fas fa-check-circle mr-1"></i>プッシュ通知が有効になっています</p>';
-                disableButton.classList.remove('hidden');
-            } else if (permission === 'denied') {
-                statusDiv.innerHTML = '<p class="text-sm text-red-600"><i class="fas fa-times-circle mr-1"></i>プッシュ通知がブロックされています。ブラウザの設定から許可してください。</p>';
-            } else {
-                statusDiv.innerHTML = '<p class="text-sm text-gray-600">プッシュ通知は有効になっていません</p>';
-                enableButton.classList.remove('hidden');
-            }
-        }
-
-        async function enablePushNotifications() {
-            try {
-                const permission = await Notification.requestPermission();
-
-                if (permission !== 'granted') {
-                    showMessage('プッシュ通知の許可が拒否されました', 'error');
-                    return;
-                }
-
-                const registration = await navigator.serviceWorker.register('/sw.js');
-                await navigator.serviceWorker.ready;
-
-                const subscription = await registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array('YOUR_VAPID_PUBLIC_KEY')
-                });
-
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/users/push-subscription`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({ subscription })
-                });
-
-                if (!response.ok) {
-                    throw new Error('プッシュ通知の登録に失敗しました');
-                }
-
-                showMessage('プッシュ通知を有効にしました');
-                checkPushNotificationStatus();
-            } catch (error) {
-                console.error('Enable push notifications error:', error);
-                showMessage('プッシュ通知の有効化に失敗しました', 'error');
-            }
-        }
-
-        async function disablePushNotifications() {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                const subscription = await registration.pushManager.getSubscription();
-
-                if (subscription) {
-                    await subscription.unsubscribe();
-                }
-
-                const token = localStorage.getItem('token');
-                const response = await fetch(`${API_URL}/api/users/push-subscription`, {
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+                async init() {
+                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                    this.currentLang = savedLang;
+                    
+                    const authToken = localStorage.getItem('authToken');
+                    if (!authToken) {
+                        window.location.href = '/login.html';
+                        return;
                     }
-                });
-
-                if (!response.ok) {
-                    throw new Error('プッシュ通知の解除に失敗しました');
+                    
+                    AOS.init({ duration: 1000, once: true });
+                    await this.loadSettings();
+                    await this.registerServiceWorker();
+                },
+                
+                switchLanguage(lang) {
+                    this.currentLang = lang;
+                    localStorage.setItem('clinicNoteLang', lang);
+                },
+                
+                async registerServiceWorker() {
+                    if ('serviceWorker' in navigator) {
+                        try {
+                            const registration = await navigator.serviceWorker.register('/sw.js');
+                            console.log('Service Worker registered:', registration);
+                        } catch (err) {
+                            console.error('Service Worker registration failed:', err);
+                        }
+                    }
+                },
+                
+                async loadSettings() {
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
+                        const response = await fetch(`${API_URL}/api/notifications/settings`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.settings.email = data.email || '';
+                            this.settings.notification_days_before = String(data.notification_days_before || 1);
+                            this.settings.push_enabled = data.push_enabled || false;
+                        }
+                    } catch (err) {
+                        console.error('Load settings error:', err);
+                    }
+                },
+                
+                async saveSettings() {
+                    this.loading = true;
+                    this.successMessage = '';
+                    this.errorMessage = '';
+                    
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
+                        const response = await fetch(`${API_URL}/api/notifications/settings`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            },
+                            body: JSON.stringify({
+                                email: this.settings.email,
+                                notification_days_before: parseInt(this.settings.notification_days_before)
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            this.successMessage = this.translations[this.currentLang].saveSuccess;
+                        } else {
+                            this.errorMessage = this.translations[this.currentLang].saveError;
+                        }
+                    } catch (err) {
+                        console.error('Save settings error:', err);
+                        this.errorMessage = this.translations[this.currentLang].saveError;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async togglePushNotifications() {
+                    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+                        this.errorMessage = this.translations[this.currentLang].pushNotSupported;
+                        this.settings.push_enabled = false;
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    
+                    try {
+                        if (this.settings.push_enabled) {
+                            const permission = await Notification.requestPermission();
+                            
+                            if (permission !== 'granted') {
+                                this.errorMessage = this.translations[this.currentLang].pushError;
+                                this.settings.push_enabled = false;
+                                this.loading = false;
+                                return;
+                            }
+                            
+                            const API_URL = 'https://clinic-note-api.onrender.com';
+                            const authToken = localStorage.getItem('authToken');
+                            const basicAuthToken = localStorage.getItem('basicAuthToken');
+                            
+                            const publicKeyResponse = await fetch(`${API_URL}/api/notifications/vapid-public-key`, {
+                                headers: {
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'X-Basic-Auth': basicAuthToken
+                                }
+                            });
+                            
+                            const { publicKey } = await publicKeyResponse.json();
+                            
+                            const registration = await navigator.serviceWorker.ready;
+                            const subscription = await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: this.urlBase64ToUint8Array(publicKey)
+                            });
+                            
+                            const subscribeResponse = await fetch(`${API_URL}/api/notifications/subscribe`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'X-Basic-Auth': basicAuthToken
+                                },
+                                body: JSON.stringify({ subscription })
+                            });
+                            
+                            if (subscribeResponse.ok) {
+                                this.successMessage = this.translations[this.currentLang].pushEnableSuccess;
+                            } else {
+                                this.errorMessage = this.translations[this.currentLang].pushError;
+                                this.settings.push_enabled = false;
+                            }
+                        } else {
+                            const API_URL = 'https://clinic-note-api.onrender.com';
+                            const authToken = localStorage.getItem('authToken');
+                            const basicAuthToken = localStorage.getItem('basicAuthToken');
+                            
+                            await fetch(`${API_URL}/api/notifications/unsubscribe`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'X-Basic-Auth': basicAuthToken
+                                }
+                            });
+                            
+                            this.successMessage = this.translations[this.currentLang].pushDisableSuccess;
+                        }
+                    } catch (err) {
+                        console.error('Toggle push notifications error:', err);
+                        this.errorMessage = this.translations[this.currentLang].pushError;
+                        this.settings.push_enabled = false;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                urlBase64ToUint8Array(base64String) {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                    const rawData = window.atob(base64);
+                    const outputArray = new Uint8Array(rawData.length);
+                    for (let i = 0; i < rawData.length; ++i) {
+                        outputArray[i] = rawData.charCodeAt(i);
+                    }
+                    return outputArray;
                 }
-
-                showMessage('プッシュ通知を無効にしました');
-                checkPushNotificationStatus();
-            } catch (error) {
-                console.error('Disable push notifications error:', error);
-                showMessage('プッシュ通知の無効化に失敗しました', 'error');
-            }
-        }
-
-        function urlBase64ToUint8Array(base64String) {
-            const padding = '='.repeat((4 - base64String.length % 4) % 4);
-            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-            const rawData = window.atob(base64);
-            const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) {
-                outputArray[i] = rawData.charCodeAt(i);
-            }
-            return outputArray;
-        }
-
-        function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('userTimezone');
-            window.location.href = 'login.html';
+            };
         }
     </script>
 </body>
