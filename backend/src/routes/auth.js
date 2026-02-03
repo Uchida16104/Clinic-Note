@@ -1,15 +1,13 @@
-// Clinic Note - Authentication Routes
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { query } = require('../db/database');
+const { supabase } = require('../db/database');
 const basicAuthMiddleware = require('../middleware/basicAuth');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_key';
 const JWT_EXPIRES_IN = '7d';
 
-// BASIC Authentication endpoint
 router.post('/basic', basicAuthMiddleware, async (req, res) => {
     try {
         res.status(200).json({
@@ -25,12 +23,10 @@ router.post('/basic', basicAuthMiddleware, async (req, res) => {
     }
 });
 
-// Register new user with timezone
 router.post('/register', basicAuthMiddleware, async (req, res) => {
     try {
         const { username, password, timezone } = req.body;
 
-        // Validation
         if (!username || !password) {
             return res.status(400).json({
                 error: 'Validation error',
@@ -52,30 +48,35 @@ router.post('/register', basicAuthMiddleware, async (req, res) => {
             });
         }
 
-        // Check if user already exists
-        const existingUser = await query(
-            'SELECT id FROM users WHERE username = $1',
-            [username]
-        );
+        const { data: existingUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('username', username)
+            .single();
 
-        if (existingUser.rows.length > 0) {
+        if (existingUser) {
             return res.status(409).json({
                 error: 'User already exists',
                 message: 'This username is already taken'
             });
         }
 
-        // Hash password
         const saltRounds = 10;
         const passwordHash = await bcrypt.hash(password, saltRounds);
 
-        // Insert user with timezone
-        const result = await query(
-            'INSERT INTO users (username, password_hash, timezone) VALUES ($1, $2, $3) RETURNING id, username, timezone, created_at',
-            [username, passwordHash, timezone || 'Asia/Tokyo']
-        );
+        const { data: newUser, error } = await supabase
+            .from('users')
+            .insert({
+                username: username,
+                password_hash: passwordHash,
+                timezone: timezone || 'Asia/Tokyo'
+            })
+            .select('id, username, timezone, created_at')
+            .single();
 
-        const newUser = result.rows[0];
+        if (error) {
+            throw error;
+        }
 
         res.status(201).json({
             message: 'User registered successfully',
@@ -96,12 +97,10 @@ router.post('/register', basicAuthMiddleware, async (req, res) => {
     }
 });
 
-// Login user
 router.post('/login', basicAuthMiddleware, async (req, res) => {
     try {
         const { username, password } = req.body;
 
-        // Validation
         if (!username || !password) {
             return res.status(400).json({
                 error: 'Validation error',
@@ -109,22 +108,19 @@ router.post('/login', basicAuthMiddleware, async (req, res) => {
             });
         }
 
-        // Find user
-        const result = await query(
-            'SELECT id, username, password_hash, timezone FROM users WHERE username = $1',
-            [username]
-        );
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('id, username, password_hash, timezone')
+            .eq('username', username)
+            .single();
 
-        if (result.rows.length === 0) {
+        if (error || !user) {
             return res.status(401).json({
                 error: 'Authentication failed',
                 message: 'Invalid username or password'
             });
         }
 
-        const user = result.rows[0];
-
-        // Verify password
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
 
         if (!isPasswordValid) {
@@ -134,7 +130,6 @@ router.post('/login', basicAuthMiddleware, async (req, res) => {
             });
         }
 
-        // Generate JWT token
         const token = jwt.sign(
             { userId: user.id, username: user.username, timezone: user.timezone },
             JWT_SECRET,
@@ -158,7 +153,6 @@ router.post('/login', basicAuthMiddleware, async (req, res) => {
     }
 });
 
-// Verify token
 router.get('/verify', basicAuthMiddleware, async (req, res) => {
     try {
         const authHeader = req.headers['authorization'];
@@ -175,13 +169,13 @@ router.get('/verify', basicAuthMiddleware, async (req, res) => {
         try {
             const decoded = jwt.verify(token, JWT_SECRET);
             
-            // Check if user still exists
-            const result = await query(
-                'SELECT id, username, timezone FROM users WHERE id = $1',
-                [decoded.userId]
-            );
+            const { data: user, error } = await supabase
+                .from('users')
+                .select('id, username, timezone')
+                .eq('id', decoded.userId)
+                .single();
 
-            if (result.rows.length === 0) {
+            if (error || !user) {
                 return res.status(401).json({
                     error: 'Unauthorized',
                     message: 'User not found'
@@ -191,9 +185,9 @@ router.get('/verify', basicAuthMiddleware, async (req, res) => {
             res.status(200).json({
                 valid: true,
                 user: {
-                    id: result.rows[0].id,
-                    username: result.rows[0].username,
-                    timezone: result.rows[0].timezone
+                    id: user.id,
+                    username: user.username,
+                    timezone: user.timezone
                 }
             });
 
@@ -213,7 +207,6 @@ router.get('/verify', basicAuthMiddleware, async (req, res) => {
     }
 });
 
-// Update timezone
 router.put('/timezone', verifyToken, async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -226,10 +219,14 @@ router.put('/timezone', verifyToken, async (req, res) => {
             });
         }
 
-        await query(
-            'UPDATE users SET timezone = $1 WHERE id = $2',
-            [timezone, userId]
-        );
+        const { error } = await supabase
+            .from('users')
+            .update({ timezone: timezone })
+            .eq('id', userId);
+
+        if (error) {
+            throw error;
+        }
 
         res.status(200).json({
             message: 'Timezone updated successfully',
@@ -245,7 +242,6 @@ router.put('/timezone', verifyToken, async (req, res) => {
     }
 });
 
-// Middleware to verify JWT token for protected routes
 function verifyToken(req, res, next) {
     const authHeader = req.headers['authorization'];
 
