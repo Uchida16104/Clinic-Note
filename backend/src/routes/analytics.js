@@ -1,79 +1,99 @@
-// Clinic Note - Analytics Routes
 const express = require('express');
 const router = express.Router();
-const { query } = require('../db/database');
+const { supabase } = require('../db/database');
 const { verifyToken } = require('./auth');
 
-// Apply JWT verification to all routes
 router.use(verifyToken);
 
-// Get comprehensive analytics
 router.get('/', async (req, res) => {
     try {
         const userId = req.user.userId;
 
-        // Get basic statistics
-        const statsResult = await query(
-            `SELECT 
-                (SELECT COUNT(*) FROM clinics WHERE user_id = $1) as total_clinics,
-                (SELECT COUNT(*) FROM appointments WHERE user_id = $1) as total_appointments,
-                (SELECT COUNT(*) FROM memos WHERE user_id = $1) as total_memos
-            `,
-            [userId]
-        );
+        const { count: clinicsCount } = await supabase
+            .from('clinics')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
 
-        const stats = statsResult.rows[0];
+        const { count: appointmentsCount } = await supabase
+            .from('appointments')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
 
-        // Get appointments with clinic details
-        const appointmentsResult = await query(
-            `SELECT a.id, a.clinic_id, a.appointment_date, a.appointment_time,
-                    c.hospital_name, c.department, c.diagnosis, c.medication
-             FROM appointments a
-             JOIN clinics c ON a.clinic_id = c.id
-             WHERE a.user_id = $1
-             ORDER BY a.appointment_date`,
-            [userId]
-        );
+        const { count: memosCount } = await supabase
+            .from('memos')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', userId);
 
-        const appointments = appointmentsResult.rows;
+        const stats = {
+            total_clinics: clinicsCount || 0,
+            total_appointments: appointmentsCount || 0,
+            total_memos: memosCount || 0
+        };
 
-        // Get clinics
-        const clinicsResult = await query(
-            `SELECT id, hospital_name, department, diagnosis, medication
-             FROM clinics
-             WHERE user_id = $1`,
-            [userId]
-        );
+        const { data: appointments, error: appointmentsError } = await supabase
+            .from('appointments')
+            .select(`
+                id,
+                clinic_id,
+                appointment_date,
+                appointment_time,
+                clinics (
+                    hospital_name,
+                    department,
+                    diagnosis,
+                    medication
+                )
+            `)
+            .eq('user_id', userId)
+            .order('appointment_date', { ascending: true });
 
-        const clinics = clinicsResult.rows;
+        if (appointmentsError) {
+            throw appointmentsError;
+        }
 
-        // Calculate frequency by department
+        const formattedAppointments = appointments.map(apt => ({
+            id: apt.id,
+            clinic_id: apt.clinic_id,
+            appointment_date: apt.appointment_date,
+            appointment_time: apt.appointment_time,
+            hospital_name: apt.clinics.hospital_name,
+            department: apt.clinics.department,
+            diagnosis: apt.clinics.diagnosis,
+            medication: apt.clinics.medication
+        }));
+
+        const { data: clinics, error: clinicsError } = await supabase
+            .from('clinics')
+            .select('id, hospital_name, department, diagnosis, medication')
+            .eq('user_id', userId);
+
+        if (clinicsError) {
+            throw clinicsError;
+        }
+
         const departmentFrequency = {};
-        appointments.forEach(apt => {
+        formattedAppointments.forEach(apt => {
             const dept = apt.department;
             departmentFrequency[dept] = (departmentFrequency[dept] || 0) + 1;
         });
 
-        // Calculate monthly frequency
         const monthlyFrequency = {};
-        appointments.forEach(apt => {
+        formattedAppointments.forEach(apt => {
             const date = new Date(apt.appointment_date);
             const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
             monthlyFrequency[monthKey] = (monthlyFrequency[monthKey] || 0) + 1;
         });
 
-        // Generate trends by department
         const trends = [];
         const departments = [...new Set(clinics.map(c => c.department))];
 
         for (const dept of departments) {
             const deptClinics = clinics.filter(c => c.department === dept);
             const deptClinicIds = deptClinics.map(c => c.id);
-            const deptAppointments = appointments.filter(a => deptClinicIds.includes(a.clinic_id));
+            const deptAppointments = formattedAppointments.filter(a => deptClinicIds.includes(a.clinic_id));
 
             if (deptAppointments.length > 0) {
-                // Calculate average interval
-                const sortedAppointments = [...deptAppointments].sort((a, b) => 
+                const sortedAppointments = [...deptAppointments].sort((a, b) =>
                     new Date(a.appointment_date) - new Date(b.appointment_date)
                 );
 
@@ -89,7 +109,6 @@ router.get('/', async (req, res) => {
                     avgInterval = Math.round(totalDays / (sortedAppointments.length - 1));
                 }
 
-                // Determine trend
                 let trend = 'stable';
                 if (sortedAppointments.length >= 3) {
                     const midpoint = Math.floor(sortedAppointments.length / 2);
@@ -114,7 +133,6 @@ router.get('/', async (req, res) => {
                     }
                 }
 
-                // Generate analysis text
                 const analysisTexts = {
                     increasing: `通院頻度が増加傾向にあります。平均${avgInterval}日間隔で通院しており、より頻繁な診察が必要な状態かもしれません。`,
                     stable: `通院頻度は安定しています。平均${avgInterval}日間隔で定期的に通院されています。`,
@@ -131,7 +149,6 @@ router.get('/', async (req, res) => {
             }
         }
 
-        // Prepare chart data
         const chartData = {
             departments: Object.keys(departmentFrequency),
             departmentCounts: Object.values(departmentFrequency),
@@ -158,21 +175,21 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get department-specific analytics
 router.get('/department/:department', async (req, res) => {
     try {
         const userId = req.user.userId;
         const department = req.params.department;
 
-        // Get clinics for department
-        const clinicsResult = await query(
-            `SELECT id, hospital_name, diagnosis, medication
-             FROM clinics
-             WHERE user_id = $1 AND department = $2`,
-            [userId, department]
-        );
+        const { data: clinics, error: clinicsError } = await supabase
+            .from('clinics')
+            .select('id, hospital_name, diagnosis, medication')
+            .eq('user_id', userId)
+            .eq('department', department);
 
-        const clinics = clinicsResult.rows;
+        if (clinicsError) {
+            throw clinicsError;
+        }
+
         const clinicIds = clinics.map(c => c.id);
 
         if (clinicIds.length === 0) {
@@ -182,27 +199,27 @@ router.get('/department/:department', async (req, res) => {
             });
         }
 
-        // Get appointments
-        const appointmentsResult = await query(
-            `SELECT id, clinic_id, appointment_date, appointment_time
-             FROM appointments
-             WHERE user_id = $1 AND clinic_id = ANY($2)
-             ORDER BY appointment_date`,
-            [userId, clinicIds]
-        );
+        const { data: appointments, error: appointmentsError } = await supabase
+            .from('appointments')
+            .select('id, clinic_id, appointment_date, appointment_time')
+            .eq('user_id', userId)
+            .in('clinic_id', clinicIds)
+            .order('appointment_date', { ascending: true });
 
-        const appointments = appointmentsResult.rows;
+        if (appointmentsError) {
+            throw appointmentsError;
+        }
 
-        // Get memos
-        const memosResult = await query(
-            `SELECT id, clinic_id, memo_date, content
-             FROM memos
-             WHERE user_id = $1 AND clinic_id = ANY($2)
-             ORDER BY memo_date DESC`,
-            [userId, clinicIds]
-        );
+        const { data: memos, error: memosError } = await supabase
+            .from('memos')
+            .select('id, clinic_id, memo_date, patient_memo, doctor_memo')
+            .eq('user_id', userId)
+            .in('clinic_id', clinicIds)
+            .order('memo_date', { ascending: false });
 
-        const memos = memosResult.rows;
+        if (memosError) {
+            throw memosError;
+        }
 
         res.status(200).json({
             department: department,
@@ -225,37 +242,50 @@ router.get('/department/:department', async (req, res) => {
     }
 });
 
-// Get timeline analytics
 router.get('/timeline', async (req, res) => {
     try {
         const userId = req.user.userId;
         const startDate = req.query.start_date;
         const endDate = req.query.end_date;
 
-        let whereClause = 'WHERE a.user_id = $1';
-        const params = [userId];
+        let query = supabase
+            .from('appointments')
+            .select(`
+                appointment_date,
+                appointment_time,
+                clinics (
+                    hospital_name,
+                    department,
+                    diagnosis
+                )
+            `)
+            .eq('user_id', userId);
 
         if (startDate) {
-            params.push(startDate);
-            whereClause += ` AND a.appointment_date >= $${params.length}`;
+            query = query.gte('appointment_date', startDate);
         }
 
         if (endDate) {
-            params.push(endDate);
-            whereClause += ` AND a.appointment_date <= $${params.length}`;
+            query = query.lte('appointment_date', endDate);
         }
 
-        const result = await query(
-            `SELECT a.appointment_date, a.appointment_time,
-                    c.hospital_name, c.department, c.diagnosis
-             FROM appointments a
-             JOIN clinics c ON a.clinic_id = c.id
-             ${whereClause}
-             ORDER BY a.appointment_date, a.appointment_time`,
-            params
-        );
+        query = query.order('appointment_date', { ascending: true });
 
-        res.status(200).json(result.rows);
+        const { data, error } = await query;
+
+        if (error) {
+            throw error;
+        }
+
+        const formattedData = data.map(apt => ({
+            appointment_date: apt.appointment_date,
+            appointment_time: apt.appointment_time,
+            hospital_name: apt.clinics.hospital_name,
+            department: apt.clinics.department,
+            diagnosis: apt.clinics.diagnosis
+        }));
+
+        res.status(200).json(formattedData);
 
     } catch (err) {
         console.error('Get timeline analytics error:', err);

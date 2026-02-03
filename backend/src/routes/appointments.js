@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../db/database');
+const { supabase } = require('../db/database');
 const { verifyToken } = require('./auth');
 
 router.use(verifyToken);
@@ -9,15 +9,51 @@ router.get('/', async (req, res) => {
     try {
         const userId = req.user.userId;
         const clinicId = req.query.clinic_id;
-        let queryText = `SELECT a.id, a.clinic_id, a.appointment_date, a.appointment_time, a.status, a.created_at, a.updated_at, c.hospital_name, c.department FROM appointments a JOIN clinics c ON a.clinic_id = c.id WHERE a.user_id = $1`;
-        const params = [userId];
+        
+        let query = supabase
+            .from('appointments')
+            .select(`
+                id,
+                clinic_id,
+                appointment_date,
+                appointment_time,
+                status,
+                reminder_sent,
+                created_at,
+                updated_at,
+                clinics (
+                    hospital_name,
+                    department
+                )
+            `)
+            .eq('user_id', userId);
+        
         if (clinicId) {
-            queryText += ' AND a.clinic_id = $2';
-            params.push(clinicId);
+            query = query.eq('clinic_id', clinicId);
         }
-        queryText += ' ORDER BY a.appointment_date DESC, a.appointment_time DESC';
-        const result = await query(queryText, params);
-        res.status(200).json(result.rows);
+        
+        query = query.order('appointment_date', { ascending: false });
+        
+        const { data, error } = await query;
+        
+        if (error) {
+            throw error;
+        }
+        
+        const formattedData = data.map(apt => ({
+            id: apt.id,
+            clinic_id: apt.clinic_id,
+            appointment_date: apt.appointment_date,
+            appointment_time: apt.appointment_time,
+            status: apt.status,
+            reminder_sent: apt.reminder_sent,
+            created_at: apt.created_at,
+            updated_at: apt.updated_at,
+            hospital_name: apt.clinics.hospital_name,
+            department: apt.clinics.department
+        }));
+        
+        res.status(200).json(formattedData);
     } catch (err) {
         console.error('Get appointments error:', err);
         res.status(500).json({ error: 'Internal server error', message: err.message });
@@ -28,17 +64,138 @@ router.post('/', async (req, res) => {
     try {
         const userId = req.user.userId;
         const { clinic_id, appointment_date, appointment_time, status } = req.body;
+        
         if (!clinic_id || !appointment_date) {
-            return res.status(400).json({ error: 'Validation error', message: 'Clinic ID and appointment date are required' });
+            return res.status(400).json({ 
+                error: 'Validation error', 
+                message: 'Clinic ID and appointment date are required' 
+            });
         }
-        const clinicResult = await query('SELECT id FROM clinics WHERE id = $1 AND user_id = $2', [clinic_id, userId]);
-        if (clinicResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Not found', message: 'Clinic not found' });
+        
+        const { data: clinic, error: clinicError } = await supabase
+            .from('clinics')
+            .select('id')
+            .eq('id', clinic_id)
+            .eq('user_id', userId)
+            .single();
+        
+        if (clinicError || !clinic) {
+            return res.status(404).json({ 
+                error: 'Not found', 
+                message: 'Clinic not found' 
+            });
         }
-        const result = await query(`INSERT INTO appointments (user_id, clinic_id, appointment_date, appointment_time, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, clinic_id, appointment_date, appointment_time, status, created_at, updated_at`, [userId, clinic_id, appointment_date, appointment_time || null, status || 'scheduled']);
-        res.status(201).json({ message: 'Appointment created successfully', appointment: result.rows[0] });
+        
+        const { data, error } = await supabase
+            .from('appointments')
+            .insert({
+                user_id: userId,
+                clinic_id: clinic_id,
+                appointment_date: appointment_date,
+                appointment_time: appointment_time || null,
+                status: status || 'scheduled',
+                reminder_sent: false
+            })
+            .select()
+            .single();
+        
+        if (error) {
+            throw error;
+        }
+        
+        res.status(201).json({ 
+            message: 'Appointment created successfully', 
+            appointment: data 
+        });
     } catch (err) {
         console.error('Create appointment error:', err);
+        res.status(500).json({ error: 'Internal server error', message: err.message });
+    }
+});
+
+router.put('/:id', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const appointmentId = req.params.id;
+        const { appointment_date, appointment_time, status } = req.body;
+        
+        const { data: existingAppointment, error: checkError } = await supabase
+            .from('appointments')
+            .select('id')
+            .eq('id', appointmentId)
+            .eq('user_id', userId)
+            .single();
+        
+        if (checkError || !existingAppointment) {
+            return res.status(404).json({ 
+                error: 'Not found', 
+                message: 'Appointment not found' 
+            });
+        }
+        
+        const updateData = {};
+        if (appointment_date !== undefined) updateData.appointment_date = appointment_date;
+        if (appointment_time !== undefined) updateData.appointment_time = appointment_time;
+        if (status !== undefined) updateData.status = status;
+        
+        if (appointment_date || appointment_time) {
+            updateData.reminder_sent = false;
+        }
+        
+        const { data, error } = await supabase
+            .from('appointments')
+            .update(updateData)
+            .eq('id', appointmentId)
+            .eq('user_id', userId)
+            .select()
+            .single();
+        
+        if (error) {
+            throw error;
+        }
+        
+        res.status(200).json({ 
+            message: 'Appointment updated successfully', 
+            appointment: data 
+        });
+    } catch (err) {
+        console.error('Update appointment error:', err);
+        res.status(500).json({ error: 'Internal server error', message: err.message });
+    }
+});
+
+router.delete('/:id', async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const appointmentId = req.params.id;
+        
+        const { data: existingAppointment, error: checkError } = await supabase
+            .from('appointments')
+            .select('id')
+            .eq('id', appointmentId)
+            .eq('user_id', userId)
+            .single();
+        
+        if (checkError || !existingAppointment) {
+            return res.status(404).json({ 
+                error: 'Not found', 
+                message: 'Appointment not found' 
+            });
+        }
+        
+        const { error } = await supabase
+            .from('appointments')
+            .delete()
+            .eq('id', appointmentId)
+            .eq('user_id', userId);
+        
+        if (error) {
+            throw error;
+        }
+        
+        res.status(200).json({ message: 'Appointment deleted successfully' });
+    } catch (err) {
+        console.error('Delete appointment error:', err);
         res.status(500).json({ error: 'Internal server error', message: err.message });
     }
 });
@@ -49,23 +206,57 @@ router.get('/memos', async (req, res) => {
         const clinicId = req.query.clinic_id;
         const startDate = req.query.start_date;
         const endDate = req.query.end_date;
-        let queryText = `SELECT m.id, m.clinic_id, m.memo_date, m.patient_memo, m.doctor_memo, m.created_at, m.updated_at, c.hospital_name, c.department FROM memos m JOIN clinics c ON m.clinic_id = c.id WHERE m.user_id = $1`;
-        const params = [userId];
+        
+        let query = supabase
+            .from('memos')
+            .select(`
+                id,
+                clinic_id,
+                memo_date,
+                patient_memo,
+                doctor_memo,
+                created_at,
+                updated_at,
+                clinics (
+                    hospital_name,
+                    department
+                )
+            `)
+            .eq('user_id', userId);
+        
         if (clinicId) {
-            params.push(clinicId);
-            queryText += ` AND m.clinic_id = $${params.length}`;
+            query = query.eq('clinic_id', clinicId);
         }
+        
         if (startDate) {
-            params.push(startDate);
-            queryText += ` AND m.memo_date >= $${params.length}`;
+            query = query.gte('memo_date', startDate);
         }
+        
         if (endDate) {
-            params.push(endDate);
-            queryText += ` AND m.memo_date <= $${params.length}`;
+            query = query.lte('memo_date', endDate);
         }
-        queryText += ' ORDER BY m.memo_date DESC';
-        const result = await query(queryText, params);
-        res.status(200).json(result.rows);
+        
+        query = query.order('memo_date', { ascending: false });
+        
+        const { data, error } = await query;
+        
+        if (error) {
+            throw error;
+        }
+        
+        const formattedData = data.map(memo => ({
+            id: memo.id,
+            clinic_id: memo.clinic_id,
+            memo_date: memo.memo_date,
+            patient_memo: memo.patient_memo,
+            doctor_memo: memo.doctor_memo,
+            created_at: memo.created_at,
+            updated_at: memo.updated_at,
+            hospital_name: memo.clinics.hospital_name,
+            department: memo.clinics.department
+        }));
+        
+        res.status(200).json(formattedData);
     } catch (err) {
         console.error('Get memos error:', err);
         res.status(500).json({ error: 'Internal server error', message: err.message });
@@ -76,15 +267,50 @@ router.post('/memos', async (req, res) => {
     try {
         const userId = req.user.userId;
         const { clinic_id, memo_date, patient_memo, doctor_memo } = req.body;
+        
         if (!clinic_id || !memo_date) {
-            return res.status(400).json({ error: 'Validation error', message: 'Clinic ID and memo date are required' });
+            return res.status(400).json({ 
+                error: 'Validation error', 
+                message: 'Clinic ID and memo date are required' 
+            });
         }
-        const clinicResult = await query('SELECT id FROM clinics WHERE id = $1 AND user_id = $2', [clinic_id, userId]);
-        if (clinicResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Not found', message: 'Clinic not found' });
+        
+        const { data: clinic, error: clinicError } = await supabase
+            .from('clinics')
+            .select('id')
+            .eq('id', clinic_id)
+            .eq('user_id', userId)
+            .single();
+        
+        if (clinicError || !clinic) {
+            return res.status(404).json({ 
+                error: 'Not found', 
+                message: 'Clinic not found' 
+            });
         }
-        const result = await query(`INSERT INTO memos (user_id, clinic_id, memo_date, patient_memo, doctor_memo) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (user_id, clinic_id, memo_date) DO UPDATE SET patient_memo = COALESCE($4, memos.patient_memo), doctor_memo = COALESCE($5, memos.doctor_memo), updated_at = CURRENT_TIMESTAMP RETURNING id, clinic_id, memo_date, patient_memo, doctor_memo, created_at, updated_at`, [userId, clinic_id, memo_date, patient_memo || null, doctor_memo || null]);
-        res.status(200).json({ message: 'Memo saved successfully', memo: result.rows[0] });
+        
+        const { data, error } = await supabase
+            .from('memos')
+            .upsert({
+                user_id: userId,
+                clinic_id: clinic_id,
+                memo_date: memo_date,
+                patient_memo: patient_memo || null,
+                doctor_memo: doctor_memo || null
+            }, {
+                onConflict: 'user_id,clinic_id,memo_date'
+            })
+            .select()
+            .single();
+        
+        if (error) {
+            throw error;
+        }
+        
+        res.status(200).json({ 
+            message: 'Memo saved successfully', 
+            memo: data 
+        });
     } catch (err) {
         console.error('Save memo error:', err);
         res.status(500).json({ error: 'Internal server error', message: err.message });
@@ -95,11 +321,31 @@ router.delete('/memos/:id', async (req, res) => {
     try {
         const userId = req.user.userId;
         const memoId = req.params.id;
-        const checkResult = await query('SELECT id FROM memos WHERE id = $1 AND user_id = $2', [memoId, userId]);
-        if (checkResult.rows.length === 0) {
-            return res.status(404).json({ error: 'Not found', message: 'Memo not found' });
+        
+        const { data: existingMemo, error: checkError } = await supabase
+            .from('memos')
+            .select('id')
+            .eq('id', memoId)
+            .eq('user_id', userId)
+            .single();
+        
+        if (checkError || !existingMemo) {
+            return res.status(404).json({ 
+                error: 'Not found', 
+                message: 'Memo not found' 
+            });
         }
-        await query('DELETE FROM memos WHERE id = $1 AND user_id = $2', [memoId, userId]);
+        
+        const { error } = await supabase
+            .from('memos')
+            .delete()
+            .eq('id', memoId)
+            .eq('user_id', userId);
+        
+        if (error) {
+            throw error;
+        }
+        
         res.status(200).json({ message: 'Memo deleted successfully' });
     } catch (err) {
         console.error('Delete memo error:', err);

@@ -1,4 +1,3 @@
-// Clinic Note - Main Server File
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -6,30 +5,27 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const cron = require('node-cron');
 
-// Import routes
 const authRoutes = require('./routes/auth');
 const clinicRoutes = require('./routes/clinic');
 const appointmentRoutes = require('./routes/appointments');
 const analyticsRoutes = require('./routes/analytics');
+const notificationRoutes = require('./routes/notifications');
 
-// Import middleware
 const basicAuthMiddleware = require('./middleware/basicAuth');
 
-// Import database
 const { initDatabase } = require('./db/database');
+const { processReminders } = require('./services/notification');
 
-// Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Security middleware
 app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
 }));
 
-// CORS configuration
 const corsOptions = {
     origin: process.env.FRONTEND_URL || '*',
     credentials: true,
@@ -39,21 +35,17 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Compression middleware
 app.use(compression());
 
-// Body parser middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Logging middleware
 if (process.env.NODE_ENV === 'production') {
     app.use(morgan('combined'));
 } else {
     app.use(morgan('dev'));
 }
 
-// Rate limiting
 const limiter = rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
@@ -63,7 +55,6 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Health check endpoint
 app.get('/health', (req, res) => {
     res.status(200).json({
         status: 'healthy',
@@ -73,7 +64,15 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Root endpoint
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV
+    });
+});
+
 app.get('/', (req, res) => {
     res.status(200).json({
         message: 'Clinic Note API',
@@ -84,18 +83,18 @@ app.get('/', (req, res) => {
             auth: '/api/auth',
             clinics: '/api/clinics',
             appointments: '/api/appointments',
-            analytics: '/api/analytics'
+            analytics: '/api/analytics',
+            notifications: '/api/notifications'
         }
     });
 });
 
-// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/clinics', basicAuthMiddleware, clinicRoutes);
 app.use('/api/appointments', basicAuthMiddleware, appointmentRoutes);
 app.use('/api/analytics', basicAuthMiddleware, analyticsRoutes);
+app.use('/api/notifications', basicAuthMiddleware, notificationRoutes);
 
-// 404 handler
 app.use((req, res) => {
     res.status(404).json({
         error: 'Not Found',
@@ -104,7 +103,6 @@ app.use((req, res) => {
     });
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
     console.error('Error:', err);
     
@@ -119,14 +117,18 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Initialize database and start server
+cron.schedule('0 9 * * *', async () => {
+    console.log('Running scheduled reminder check at 9:00 AM...');
+    await processReminders();
+}, {
+    timezone: 'Asia/Tokyo'
+});
+
 async function startServer() {
     try {
-        // Initialize database
         await initDatabase();
         console.log('Database initialized successfully');
 
-        // Start server
         app.listen(PORT, '0.0.0.0', () => {
             console.log(`
 ╔═══════════════════════════════════════════════════════╗
@@ -140,17 +142,15 @@ async function startServer() {
 ║   Health Check: http://localhost:${PORT}/health${' '.repeat(14)}║
 ║   API Docs: http://localhost:${PORT}/${' '.repeat(19)}║
 ║                                                       ║
+║   Reminder Scheduler: Active (9:00 AM daily)         ║
+║                                                       ║
 ╚═══════════════════════════════════════════════════════╝
             `);
         });
 
-        // Graceful shutdown
         process.on('SIGTERM', () => {
             console.log('SIGTERM signal received: closing HTTP server');
-            server.close(() => {
-                console.log('HTTP server closed');
-                process.exit(0);
-            });
+            process.exit(0);
         });
 
         process.on('SIGINT', () => {
@@ -164,7 +164,6 @@ async function startServer() {
     }
 }
 
-// Start the server
 startServer();
 
 module.exports = app;

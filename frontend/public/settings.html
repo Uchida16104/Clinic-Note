@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Note - 通知設定</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <style>
+        sl-input::part(base), sl-textarea::part(base), sl-select::part(combobox) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-input::part(input), sl-textarea::part(textarea) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-card {
+            background-color: #ffffff !important;
+        }
+        sl-card::part(base) {
+            background-color: #ffffff !important;
+        }
+        h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
+            color: #1f2937 !important;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div x-data="notificationSettings()" x-init="init()" class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8" data-aos="fade-down">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
+                <p class="mt-2 text-gray-700" x-text="translations[currentLang].subtitle"></p>
+            </div>
+            <div class="flex gap-2">
+                <sl-button-group label="Language">
+                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                        <span class="iconify" data-icon="twemoji:flag-japan"></span>
+                    </sl-button>
+                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                        <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                    </sl-button>
+                </sl-button-group>
+                <sl-button variant="default" @click="window.location.href='/dashboard.html'">
+                    <span class="iconify" data-icon="mdi:arrow-left"></span>
+                </sl-button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-2xl mx-auto" data-aos="fade-up">
+            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''">
+                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                <span x-text="successMessage"></span>
+            </sl-alert>
+
+            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''">
+                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
+                <span x-text="errorMessage"></span>
+            </sl-alert>
+
+            <div class="space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
+                        <span class="iconify text-indigo-600 mr-2" data-icon="mdi:email"></span>
+                        <span x-text="translations[currentLang].emailSettings"></span>
+                    </h2>
+                    <sl-input 
+                        x-model="settings.email" 
+                        type="email"
+                        :label="translations[currentLang].emailLabel"
+                        :placeholder="translations[currentLang].emailPlaceholder"
+                        size="large">
+                        <span slot="prefix" class="iconify" data-icon="mdi:email"></span>
+                    </sl-input>
+                    <small class="text-gray-500" x-text="translations[currentLang].emailHint"></small>
+                </div>
+
+                <div>
+                    <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
+                        <span class="iconify text-indigo-600 mr-2" data-icon="mdi:clock-alert"></span>
+                        <span x-text="translations[currentLang].reminderSettings"></span>
+                    </h2>
+                    <sl-select 
+                        x-model="settings.notification_days_before"
+                        :label="translations[currentLang].reminderDaysLabel"
+                        size="large">
+                        <sl-option value="0" x-text="translations[currentLang].sameDay"></sl-option>
+                        <sl-option value="1" x-text="translations[currentLang].oneDayBefore"></sl-option>
+                        <sl-option value="2" x-text="translations[currentLang].twoDaysBefore"></sl-option>
+                        <sl-option value="3" x-text="translations[currentLang].threeDaysBefore"></sl-option>
+                        <sl-option value="7" x-text="translations[currentLang].oneWeekBefore"></sl-option>
+                    </sl-select>
+                    <small class="text-gray-500" x-text="translations[currentLang].reminderHint"></small>
+                </div>
+
+                <div>
+                    <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
+                        <span class="iconify text-indigo-600 mr-2" data-icon="mdi:bell"></span>
+                        <span x-text="translations[currentLang].pushSettings"></span>
+                    </h2>
+                    <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                        <div>
+                            <p class="font-medium text-gray-800" x-text="translations[currentLang].pushNotifications"></p>
+                            <p class="text-sm text-gray-500" x-text="translations[currentLang].pushDescription"></p>
+                        </div>
+                        <sl-switch 
+                            x-model="settings.push_enabled"
+                            @sl-change="togglePushNotifications()"
+                            :disabled="loading">
+                        </sl-switch>
+                    </div>
+                </div>
+
+                <div class="pt-4">
+                    <sl-button 
+                        variant="primary" 
+                        size="large" 
+                        class="w-full"
+                        :loading="loading"
+                        @click="saveSettings()">
+                        <span class="iconify mr-2" data-icon="mdi:content-save"></span>
+                        <span x-text="translations[currentLang].save"></span>
+                    </sl-button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function notificationSettings() {
+            return {
+                currentLang: 'ja',
+                loading: false,
+                successMessage: '',
+                errorMessage: '',
+                settings: {
+                    email: '',
+                    notification_days_before: '1',
+                    push_enabled: false
+                },
+                translations: {
+                    ja: {
+                        title: '通知設定',
+                        subtitle: 'リマインダー通知の設定',
+                        emailSettings: 'メール通知',
+                        emailLabel: 'メールアドレス',
+                        emailPlaceholder: 'example@example.com',
+                        emailHint: '通院リマインダーを受け取るメールアドレスを入力してください',
+                        reminderSettings: 'リマインダー設定',
+                        reminderDaysLabel: '何日前に通知するか',
+                        sameDay: '当日',
+                        oneDayBefore: '1日前',
+                        twoDaysBefore: '2日前',
+                        threeDaysBefore: '3日前',
+                        oneWeekBefore: '1週間前',
+                        reminderHint: '通院予定日の何日前にリマインダーを受け取るか選択してください',
+                        pushSettings: 'プッシュ通知',
+                        pushNotifications: 'プッシュ通知',
+                        pushDescription: 'ブラウザのプッシュ通知を有効にする',
+                        save: '保存',
+                        saveSuccess: '設定を保存しました',
+                        saveError: '設定の保存に失敗しました',
+                        pushEnableSuccess: 'プッシュ通知を有効にしました',
+                        pushDisableSuccess: 'プッシュ通知を無効にしました',
+                        pushError: 'プッシュ通知の設定に失敗しました',
+                        pushNotSupported: 'このブラウザはプッシュ通知に対応していません'
+                    },
+                    en: {
+                        title: 'Notification Settings',
+                        subtitle: 'Configure Reminder Notifications',
+                        emailSettings: 'Email Notifications',
+                        emailLabel: 'Email Address',
+                        emailPlaceholder: 'example@example.com',
+                        emailHint: 'Enter the email address to receive appointment reminders',
+                        reminderSettings: 'Reminder Settings',
+                        reminderDaysLabel: 'Notify me',
+                        sameDay: 'On the day',
+                        oneDayBefore: '1 day before',
+                        twoDaysBefore: '2 days before',
+                        threeDaysBefore: '3 days before',
+                        oneWeekBefore: '1 week before',
+                        reminderHint: 'Choose when to receive reminders before your appointments',
+                        pushSettings: 'Push Notifications',
+                        pushNotifications: 'Push Notifications',
+                        pushDescription: 'Enable browser push notifications',
+                        save: 'Save Settings',
+                        saveSuccess: 'Settings saved successfully',
+                        saveError: 'Failed to save settings',
+                        pushEnableSuccess: 'Push notifications enabled',
+                        pushDisableSuccess: 'Push notifications disabled',
+                        pushError: 'Failed to configure push notifications',
+                        pushNotSupported: 'Push notifications are not supported in this browser'
+                    }
+                },
+                
+                async init() {
+                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                    this.currentLang = savedLang;
+                    
+                    const authToken = localStorage.getItem('authToken');
+                    if (!authToken) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+                    
+                    AOS.init({ duration: 1000, once: true });
+                    await this.loadSettings();
+                    await this.registerServiceWorker();
+                },
+                
+                switchLanguage(lang) {
+                    this.currentLang = lang;
+                    localStorage.setItem('clinicNoteLang', lang);
+                },
+                
+                async registerServiceWorker() {
+                    if ('serviceWorker' in navigator) {
+                        try {
+                            const registration = await navigator.serviceWorker.register('/sw.js');
+                            console.log('Service Worker registered:', registration);
+                        } catch (err) {
+                            console.error('Service Worker registration failed:', err);
+                        }
+                    }
+                },
+                
+                async loadSettings() {
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
+                        const response = await fetch(`${API_URL}/api/notifications/settings`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.settings.email = data.email || '';
+                            this.settings.notification_days_before = String(data.notification_days_before || 1);
+                            this.settings.push_enabled = data.push_enabled || false;
+                        }
+                    } catch (err) {
+                        console.error('Load settings error:', err);
+                    }
+                },
+                
+                async saveSettings() {
+                    this.loading = true;
+                    this.successMessage = '';
+                    this.errorMessage = '';
+                    
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
+                        const response = await fetch(`${API_URL}/api/notifications/settings`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            },
+                            body: JSON.stringify({
+                                email: this.settings.email,
+                                notification_days_before: parseInt(this.settings.notification_days_before)
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            this.successMessage = this.translations[this.currentLang].saveSuccess;
+                        } else {
+                            this.errorMessage = this.translations[this.currentLang].saveError;
+                        }
+                    } catch (err) {
+                        console.error('Save settings error:', err);
+                        this.errorMessage = this.translations[this.currentLang].saveError;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                async togglePushNotifications() {
+                    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+                        this.errorMessage = this.translations[this.currentLang].pushNotSupported;
+                        this.settings.push_enabled = false;
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    
+                    try {
+                        if (this.settings.push_enabled) {
+                            const permission = await Notification.requestPermission();
+                            
+                            if (permission !== 'granted') {
+                                this.errorMessage = this.translations[this.currentLang].pushError;
+                                this.settings.push_enabled = false;
+                                this.loading = false;
+                                return;
+                            }
+                            
+                            const API_URL = 'https://clinic-note-api.onrender.com';
+                            const authToken = localStorage.getItem('authToken');
+                            const basicAuthToken = localStorage.getItem('basicAuthToken');
+                            
+                            const publicKeyResponse = await fetch(`${API_URL}/api/notifications/vapid-public-key`, {
+                                headers: {
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'X-Basic-Auth': basicAuthToken
+                                }
+                            });
+                            
+                            const { publicKey } = await publicKeyResponse.json();
+                            
+                            const registration = await navigator.serviceWorker.ready;
+                            const subscription = await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: this.urlBase64ToUint8Array(publicKey)
+                            });
+                            
+                            const subscribeResponse = await fetch(`${API_URL}/api/notifications/subscribe`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'X-Basic-Auth': basicAuthToken
+                                },
+                                body: JSON.stringify({ subscription })
+                            });
+                            
+                            if (subscribeResponse.ok) {
+                                this.successMessage = this.translations[this.currentLang].pushEnableSuccess;
+                            } else {
+                                this.errorMessage = this.translations[this.currentLang].pushError;
+                                this.settings.push_enabled = false;
+                            }
+                        } else {
+                            const API_URL = 'https://clinic-note-api.onrender.com';
+                            const authToken = localStorage.getItem('authToken');
+                            const basicAuthToken = localStorage.getItem('basicAuthToken');
+                            
+                            await fetch(`${API_URL}/api/notifications/unsubscribe`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Authorization': `Bearer ${authToken}`,
+                                    'X-Basic-Auth': basicAuthToken
+                                }
+                            });
+                            
+                            this.successMessage = this.translations[this.currentLang].pushDisableSuccess;
+                        }
+                    } catch (err) {
+                        console.error('Toggle push notifications error:', err);
+                        this.errorMessage = this.translations[this.currentLang].pushError;
+                        this.settings.push_enabled = false;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                
+                urlBase64ToUint8Array(base64String) {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+                    const rawData = window.atob(base64);
+                    const outputArray = new Uint8Array(rawData.length);
+                    for (let i = 0; i < rawData.length; ++i) {
+                        outputArray[i] = rawData.charCodeAt(i);
+                    }
+                    return outputArray;
+                }
+            };
+        }
+    </script>
+</body>
+</html>

@@ -1,26 +1,25 @@
-// Clinic Note - Clinic Routes
 const express = require('express');
 const router = express.Router();
-const { query } = require('../db/database');
+const { supabase } = require('../db/database');
 const { verifyToken } = require('./auth');
 
-// Apply JWT verification to all routes
 router.use(verifyToken);
 
-// Get all clinics for user
 router.get('/', async (req, res) => {
     try {
         const userId = req.user.userId;
 
-        const result = await query(
-            `SELECT id, hospital_name, department, diagnosis, medication, created_at, updated_at 
-             FROM clinics 
-             WHERE user_id = $1 
-             ORDER BY created_at DESC`,
-            [userId]
-        );
+        const { data, error } = await supabase
+            .from('clinics')
+            .select('id, hospital_name, department, diagnosis, medication, created_at, updated_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
 
-        res.status(200).json(result.rows);
+        if (error) {
+            throw error;
+        }
+
+        res.status(200).json(data);
 
     } catch (err) {
         console.error('Get clinics error:', err);
@@ -31,27 +30,26 @@ router.get('/', async (req, res) => {
     }
 });
 
-// Get single clinic
 router.get('/:id', async (req, res) => {
     try {
         const userId = req.user.userId;
         const clinicId = req.params.id;
 
-        const result = await query(
-            `SELECT id, hospital_name, department, diagnosis, medication, created_at, updated_at 
-             FROM clinics 
-             WHERE id = $1 AND user_id = $2`,
-            [clinicId, userId]
-        );
+        const { data, error } = await supabase
+            .from('clinics')
+            .select('id, hospital_name, department, diagnosis, medication, created_at, updated_at')
+            .eq('id', clinicId)
+            .eq('user_id', userId)
+            .single();
 
-        if (result.rows.length === 0) {
+        if (error || !data) {
             return res.status(404).json({
                 error: 'Not found',
                 message: 'Clinic not found'
             });
         }
 
-        res.status(200).json(result.rows[0]);
+        res.status(200).json(data);
 
     } catch (err) {
         console.error('Get clinic error:', err);
@@ -62,13 +60,11 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Create new clinic
 router.post('/', async (req, res) => {
     try {
         const userId = req.user.userId;
         const { hospital_name, department, diagnosis, medication } = req.body;
 
-        // Validation
         if (!hospital_name || !department) {
             return res.status(400).json({
                 error: 'Validation error',
@@ -76,16 +72,25 @@ router.post('/', async (req, res) => {
             });
         }
 
-        const result = await query(
-            `INSERT INTO clinics (user_id, hospital_name, department, diagnosis, medication) 
-             VALUES ($1, $2, $3, $4, $5) 
-             RETURNING id, hospital_name, department, diagnosis, medication, created_at, updated_at`,
-            [userId, hospital_name, department, diagnosis || null, medication || null]
-        );
+        const { data, error } = await supabase
+            .from('clinics')
+            .insert({
+                user_id: userId,
+                hospital_name: hospital_name,
+                department: department,
+                diagnosis: diagnosis || null,
+                medication: medication || null
+            })
+            .select()
+            .single();
+
+        if (error) {
+            throw error;
+        }
 
         res.status(201).json({
             message: 'Clinic created successfully',
-            clinic: result.rows[0]
+            clinic: data
         });
 
     } catch (err) {
@@ -97,27 +102,26 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Update clinic
 router.put('/:id', async (req, res) => {
     try {
         const userId = req.user.userId;
         const clinicId = req.params.id;
         const { hospital_name, department, diagnosis, medication } = req.body;
 
-        // Check if clinic exists and belongs to user
-        const checkResult = await query(
-            'SELECT id FROM clinics WHERE id = $1 AND user_id = $2',
-            [clinicId, userId]
-        );
+        const { data: existingClinic, error: checkError } = await supabase
+            .from('clinics')
+            .select('id')
+            .eq('id', clinicId)
+            .eq('user_id', userId)
+            .single();
 
-        if (checkResult.rows.length === 0) {
+        if (checkError || !existingClinic) {
             return res.status(404).json({
                 error: 'Not found',
                 message: 'Clinic not found'
             });
         }
 
-        // Validation
         if (!hospital_name || !department) {
             return res.status(400).json({
                 error: 'Validation error',
@@ -125,17 +129,26 @@ router.put('/:id', async (req, res) => {
             });
         }
 
-        const result = await query(
-            `UPDATE clinics 
-             SET hospital_name = $1, department = $2, diagnosis = $3, medication = $4 
-             WHERE id = $5 AND user_id = $6 
-             RETURNING id, hospital_name, department, diagnosis, medication, created_at, updated_at`,
-            [hospital_name, department, diagnosis || null, medication || null, clinicId, userId]
-        );
+        const { data, error } = await supabase
+            .from('clinics')
+            .update({
+                hospital_name: hospital_name,
+                department: department,
+                diagnosis: diagnosis || null,
+                medication: medication || null
+            })
+            .eq('id', clinicId)
+            .eq('user_id', userId)
+            .select()
+            .single();
+
+        if (error) {
+            throw error;
+        }
 
         res.status(200).json({
             message: 'Clinic updated successfully',
-            clinic: result.rows[0]
+            clinic: data
         });
 
     } catch (err) {
@@ -147,30 +160,34 @@ router.put('/:id', async (req, res) => {
     }
 });
 
-// Delete clinic
 router.delete('/:id', async (req, res) => {
     try {
         const userId = req.user.userId;
         const clinicId = req.params.id;
 
-        // Check if clinic exists and belongs to user
-        const checkResult = await query(
-            'SELECT id FROM clinics WHERE id = $1 AND user_id = $2',
-            [clinicId, userId]
-        );
+        const { data: existingClinic, error: checkError } = await supabase
+            .from('clinics')
+            .select('id')
+            .eq('id', clinicId)
+            .eq('user_id', userId)
+            .single();
 
-        if (checkResult.rows.length === 0) {
+        if (checkError || !existingClinic) {
             return res.status(404).json({
                 error: 'Not found',
                 message: 'Clinic not found'
             });
         }
 
-        // Delete clinic (cascades to appointments and memos)
-        await query(
-            'DELETE FROM clinics WHERE id = $1 AND user_id = $2',
-            [clinicId, userId]
-        );
+        const { error } = await supabase
+            .from('clinics')
+            .delete()
+            .eq('id', clinicId)
+            .eq('user_id', userId);
+
+        if (error) {
+            throw error;
+        }
 
         res.status(200).json({
             message: 'Clinic deleted successfully'
@@ -185,21 +202,23 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// Get clinics by hospital
 router.get('/hospital/:hospitalName', async (req, res) => {
     try {
         const userId = req.user.userId;
         const hospitalName = req.params.hospitalName;
 
-        const result = await query(
-            `SELECT id, hospital_name, department, diagnosis, medication, created_at, updated_at 
-             FROM clinics 
-             WHERE user_id = $1 AND hospital_name = $2 
-             ORDER BY department`,
-            [userId, hospitalName]
-        );
+        const { data, error } = await supabase
+            .from('clinics')
+            .select('id, hospital_name, department, diagnosis, medication, created_at, updated_at')
+            .eq('user_id', userId)
+            .eq('hospital_name', hospitalName)
+            .order('department', { ascending: true });
 
-        res.status(200).json(result.rows);
+        if (error) {
+            throw error;
+        }
+
+        res.status(200).json(data);
 
     } catch (err) {
         console.error('Get clinics by hospital error:', err);
@@ -210,20 +229,23 @@ router.get('/hospital/:hospitalName', async (req, res) => {
     }
 });
 
-// Get unique hospitals
 router.get('/list/hospitals', async (req, res) => {
     try {
         const userId = req.user.userId;
 
-        const result = await query(
-            `SELECT DISTINCT hospital_name 
-             FROM clinics 
-             WHERE user_id = $1 
-             ORDER BY hospital_name`,
-            [userId]
-        );
+        const { data, error } = await supabase
+            .from('clinics')
+            .select('hospital_name')
+            .eq('user_id', userId)
+            .order('hospital_name', { ascending: true });
 
-        res.status(200).json(result.rows.map(row => row.hospital_name));
+        if (error) {
+            throw error;
+        }
+
+        const uniqueHospitals = [...new Set(data.map(row => row.hospital_name))];
+
+        res.status(200).json(uniqueHospitals);
 
     } catch (err) {
         console.error('Get hospitals error:', err);
@@ -234,20 +256,23 @@ router.get('/list/hospitals', async (req, res) => {
     }
 });
 
-// Get unique departments
 router.get('/list/departments', async (req, res) => {
     try {
         const userId = req.user.userId;
 
-        const result = await query(
-            `SELECT DISTINCT department 
-             FROM clinics 
-             WHERE user_id = $1 
-             ORDER BY department`,
-            [userId]
-        );
+        const { data, error } = await supabase
+            .from('clinics')
+            .select('department')
+            .eq('user_id', userId)
+            .order('department', { ascending: true });
 
-        res.status(200).json(result.rows.map(row => row.department));
+        if (error) {
+            throw error;
+        }
+
+        const uniqueDepartments = [...new Set(data.map(row => row.department))];
+
+        res.status(200).json(uniqueDepartments);
 
     } catch (err) {
         console.error('Get departments error:', err);
