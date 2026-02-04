@@ -12,6 +12,7 @@ const clinicRoutes = require('./routes/clinic');
 const appointmentRoutes = require('./routes/appointments');
 const analyticsRoutes = require('./routes/analytics');
 const notificationRoutes = require('./routes/notifications');
+const usersRoutes = require('./routes/users');
 
 const basicAuthMiddleware = require('./middleware/basicAuth');
 
@@ -84,7 +85,8 @@ app.get('/', (req, res) => {
             clinics: '/api/clinics',
             appointments: '/api/appointments',
             analytics: '/api/analytics',
-            notifications: '/api/notifications'
+            notifications: '/api/notifications',
+            users: '/api/users'
         }
     });
 });
@@ -94,6 +96,7 @@ app.use('/api/clinics', basicAuthMiddleware, clinicRoutes);
 app.use('/api/appointments', basicAuthMiddleware, appointmentRoutes);
 app.use('/api/analytics', basicAuthMiddleware, analyticsRoutes);
 app.use('/api/notifications', basicAuthMiddleware, notificationRoutes);
+app.use('/api/users', basicAuthMiddleware, usersRoutes);
 
 app.use((req, res) => {
     res.status(404).json({
