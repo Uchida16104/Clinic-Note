@@ -13,17 +13,12 @@
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="/js/timezone-utils.js"></script>
     <style>
-        /* 入力フィールド・カード・枠の背景色を白に統一 */
-        sl-input::part(base), 
-        sl-textarea::part(base), 
-        sl-select::part(combobox) {
+        sl-input::part(base), sl-textarea::part(base), sl-select::part(combobox) {
             background-color: #ffffff !important;
             border: 1px solid #d1d5db !important;
         }
         
-        sl-input::part(input), 
-        sl-textarea::part(textarea),
-        sl-select::part(display-input) {
+        sl-input::part(input), sl-textarea::part(textarea) {
             background-color: #ffffff !important;
             color: #1f2937 !important;
         }
@@ -40,7 +35,6 @@
             background-color: #ffffff !important;
         }
         
-        /* 全てのテキスト要素を黒系に統一 */
         h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
             color: #1f2937 !important;
         }
@@ -52,11 +46,10 @@
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
     <div x-data="dashboardData()" x-init="init()" class="container mx-auto px-4 py-8">
-        <!-- Header -->
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
                 <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
-                <p class="mt-2 text-gray-700">
+                <p class="text-gray-700 mt-2">
                     <span x-text="translations[currentLang].subtitle"></span>
                     <sl-badge variant="success" pill x-show="syncStatus === 'synced'" class="ml-2">
                         <span class="iconify mr-1" data-icon="mdi:cloud-check"></span>
@@ -86,12 +79,17 @@
             </div>
         </div>
 
-        <!-- Navigation -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8" data-aos="fade-up">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8" data-aos="fade-up">
             <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="window.location.href='/calendar.html'">
                 <div class="text-center p-4" style="background-color: #ffffff !important;">
                     <span class="iconify text-6xl mb-4" data-icon="mdi:calendar" style="color: #10b981;"></span>
                     <h3 class="text-xl font-bold text-gray-800" x-text="translations[currentLang].calendar" style="color: #1f2937 !important;"></h3>
+                </div>
+            </sl-card>
+            <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="window.location.href='/appointments.html'">
+                <div class="text-center p-4" style="background-color: #ffffff !important;">
+                    <span class="iconify text-6xl mb-4" data-icon="mdi:calendar-check" style="color: #3b82f6;"></span>
+                    <h3 class="text-xl font-bold text-gray-800" x-text="translations[currentLang].appointments" style="color: #1f2937 !important;"></h3>
                 </div>
             </sl-card>
             <sl-card class="cursor-pointer hover:shadow-xl transition-shadow" @click="window.location.href='/analytics.html'">
@@ -114,7 +112,6 @@
             </sl-card>
         </div>
 
-        <!-- Clinic List -->
         <div class="bg-white rounded-2xl shadow-xl p-8" data-aos="fade-up" data-aos-delay="200" style="background-color: #ffffff !important;">
             <h2 class="text-2xl font-bold mb-6 flex items-center text-gray-800" style="color: #1f2937 !important;">
                 <span class="iconify text-indigo-600 mr-2" data-icon="mdi:hospital-box"></span>
@@ -144,9 +141,12 @@
                                     <span x-text="clinic.medication" style="color: #1f2937 !important;"></span>
                                 </div>
                             </div>
-                            <div class="mt-4 flex gap-2">
+                            <div class="mt-4 flex gap-2 flex-wrap">
                                 <sl-button size="small" variant="primary" @click="selectClinicForAppointment(clinic)">
                                     <span class="iconify" data-icon="mdi:calendar-plus"></span>
+                                </sl-button>
+                                <sl-button size="small" variant="success" @click="editClinic(clinic)">
+                                    <span class="iconify" data-icon="mdi:pencil"></span>
                                 </sl-button>
                                 <sl-button size="small" variant="danger" @click="deleteClinic(clinic.id)">
                                     <span class="iconify" data-icon="mdi:delete"></span>
@@ -158,7 +158,6 @@
             </div>
         </div>
 
-        <!-- Add Clinic Dialog -->
         <sl-dialog :open="showAddClinicDialog" @sl-request-close="showAddClinicDialog = false" :label="translations[currentLang].addClinicTitle">
             <form @submit.prevent="addClinic()" class="space-y-4">
                 <sl-input 
@@ -191,7 +190,38 @@
             </form>
         </sl-dialog>
 
-        <!-- Add Appointment Dialog -->
+        <sl-dialog :open="showEditClinicDialog" @sl-request-close="showEditClinicDialog = false" :label="translations[currentLang].editClinicTitle">
+            <form @submit.prevent="updateClinic()" class="space-y-4">
+                <sl-input 
+                    x-model="editClinicData.hospital_name" 
+                    :label="translations[currentLang].hospitalName"
+                    :placeholder="translations[currentLang].hospitalNamePlaceholder"
+                    required>
+                </sl-input>
+                <sl-input 
+                    x-model="editClinicData.department" 
+                    :label="translations[currentLang].department"
+                    :placeholder="translations[currentLang].departmentPlaceholder"
+                    required>
+                </sl-input>
+                <sl-textarea 
+                    x-model="editClinicData.diagnosis" 
+                    :label="translations[currentLang].diagnosis"
+                    :placeholder="translations[currentLang].diagnosisPlaceholder"
+                    rows="3">
+                </sl-textarea>
+                <sl-textarea 
+                    x-model="editClinicData.medication" 
+                    :label="translations[currentLang].medication"
+                    :placeholder="translations[currentLang].medicationPlaceholder"
+                    rows="3">
+                </sl-textarea>
+                <sl-button type="submit" variant="success" class="w-full" :loading="loading">
+                    <span x-text="translations[currentLang].update"></span>
+                </sl-button>
+            </form>
+        </sl-dialog>
+
         <sl-dialog :open="showAppointmentDialog" @sl-request-close="showAppointmentDialog = false" :label="translations[currentLang].addAppointmentTitle">
             <form @submit.prevent="addAppointment()" class="space-y-4">
                 <sl-input 
@@ -228,9 +258,11 @@
                 loading: false,
                 clinics: [],
                 showAddClinicDialog: false,
+                showEditClinicDialog: false,
                 showAppointmentDialog: false,
                 selectedClinic: null,
                 newClinic: { hospital_name: '', department: '', diagnosis: '', medication: '' },
+                editClinicData: { id: null, hospital_name: '', department: '', diagnosis: '', medication: '' },
                 newAppointment: { date: '', time: '' },
                 syncStatus: 'synced',
                 syncInterval: null,
@@ -243,11 +275,13 @@
                         synced: '同期完了',
                         syncing: '同期中',
                         calendar: 'カレンダー',
+                        appointments: '通院履歴',
                         analytics: 'データ分析',
                         addClinic: '病院を追加',
                         clinicList: '登録済み病院',
                         noClinics: '登録された病院がありません。病院を追加してください。',
                         addClinicTitle: '病院を追加',
+                        editClinicTitle: '病院情報を編集',
                         hospitalName: '病院名',
                         hospitalNamePlaceholder: '例: ○○総合病院',
                         department: '診療科目',
@@ -257,6 +291,7 @@
                         medication: '服薬名',
                         medicationPlaceholder: '例: アムロジピン',
                         save: '保存',
+                        update: '更新',
                         addAppointmentTitle: '通院日を追加',
                         appointmentDate: '通院日',
                         appointmentTime: '時間',
@@ -268,11 +303,13 @@
                         synced: 'Synced',
                         syncing: 'Syncing',
                         calendar: 'Calendar',
+                        appointments: 'Appointments',
                         analytics: 'Analytics',
                         addClinic: 'Add Clinic',
                         clinicList: 'Registered Clinics',
                         noClinics: 'No clinics registered. Please add a clinic.',
                         addClinicTitle: 'Add Clinic',
+                        editClinicTitle: 'Edit Clinic Information',
                         hospitalName: 'Hospital Name',
                         hospitalNamePlaceholder: 'e.g., General Hospital',
                         department: 'Department',
@@ -282,6 +319,7 @@
                         medication: 'Medication',
                         medicationPlaceholder: 'e.g., Amlodipine',
                         save: 'Save',
+                        update: 'Update',
                         addAppointmentTitle: 'Add Appointment',
                         appointmentDate: 'Date',
                         appointmentTime: 'Time',
@@ -361,6 +399,53 @@
                         }
                     } catch (err) {
                         console.error('Add clinic error:', err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                editClinic(clinic) {
+                    this.editClinicData = {
+                        id: clinic.id,
+                        hospital_name: clinic.hospital_name,
+                        department: clinic.department,
+                        diagnosis: clinic.diagnosis || '',
+                        medication: clinic.medication || ''
+                    };
+                    this.showEditClinicDialog = true;
+                },
+
+                async updateClinic() {
+                    this.loading = true;
+                    
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+                        
+                        const response = await fetch(`${API_URL}/api/clinics/${this.editClinicData.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            },
+                            body: JSON.stringify({
+                                hospital_name: this.editClinicData.hospital_name,
+                                department: this.editClinicData.department,
+                                diagnosis: this.editClinicData.diagnosis,
+                                medication: this.editClinicData.medication
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            await this.loadClinics();
+                            this.showEditClinicDialog = false;
+                            this.editClinicData = { id: null, hospital_name: '', department: '', diagnosis: '', medication: '' };
+                            await this.syncData();
+                        }
+                    } catch (err) {
+                        console.error('Update clinic error:', err);
                     } finally {
                         this.loading = false;
                     }
@@ -457,7 +542,7 @@
                 startAutoSync() {
                     this.syncInterval = setInterval(() => {
                         this.syncData();
-                    }, 300000); // 5分ごとに同期
+                    }, 300000);
                 },
                 
                 logout() {

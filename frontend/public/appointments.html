@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Note - 通院履歴</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <script src="/js/timezone-utils.js"></script>
+    <style>
+        sl-input::part(base), sl-textarea::part(base), sl-select::part(combobox) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-input::part(input), sl-textarea::part(textarea), sl-select::part(display-input) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-card {
+            background-color: #ffffff !important;
+        }
+        sl-card::part(base) {
+            background-color: #ffffff !important;
+        }
+        h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
+            color: #1f2937 !important;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div x-data="appointmentsData()" x-init="init()" class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8" data-aos="fade-down">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
+                <p class="mt-2 text-gray-700" x-text="translations[currentLang].subtitle"></p>
+            </div>
+            <div class="flex gap-2">
+                <sl-button-group label="Language">
+                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                        <span class="iconify" data-icon="twemoji:flag-japan"></span>
+                    </sl-button>
+                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                        <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                    </sl-button>
+                </sl-button-group>
+                <sl-button variant="success" @click="showAddDialog = true">
+                    <span class="iconify" data-icon="mdi:plus"></span>
+                    <span x-text="translations[currentLang].addNew"></span>
+                </sl-button>
+                <sl-button variant="default" @click="window.location.href='/dashboard.html'">
+                    <span class="iconify" data-icon="mdi:arrow-left"></span>
+                </sl-button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-8" data-aos="fade-up" style="background-color: #ffffff !important;">
+            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''">
+                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                <span x-text="successMessage"></span>
+            </sl-alert>
+
+            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''">
+                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
+                <span x-text="errorMessage"></span>
+            </sl-alert>
+
+            <div class="mb-6 flex gap-4">
+                <sl-select 
+                    x-model="filterClinic"
+                    :placeholder="translations[currentLang].filterByClinic"
+                    size="large"
+                    @sl-change="loadAppointments()"
+                    clearable>
+                    <sl-option value="">
+                        <span x-text="translations[currentLang].allClinics"></span>
+                    </sl-option>
+                    <template x-for="clinic in clinics" :key="clinic.id">
+                        <sl-option :value="clinic.id" x-text="`${clinic.hospital_name} - ${clinic.department}`"></sl-option>
+                    </template>
+                </sl-select>
+
+                <sl-select 
+                    x-model="filterStatus"
+                    :placeholder="translations[currentLang].filterByStatus"
+                    size="large"
+                    @sl-change="filterAppointments()"
+                    clearable>
+                    <sl-option value="">
+                        <span x-text="translations[currentLang].allStatus"></span>
+                    </sl-option>
+                    <sl-option value="upcoming">
+                        <span x-text="translations[currentLang].upcoming"></span>
+                    </sl-option>
+                    <sl-option value="past">
+                        <span x-text="translations[currentLang].past"></span>
+                    </sl-option>
+                </sl-select>
+            </div>
+
+            <sl-alert x-show="filteredAppointments.length === 0" variant="primary" open>
+                <span class="iconify slot-icon" data-icon="mdi:information"></span>
+                <span x-text="translations[currentLang].noAppointments"></span>
+            </sl-alert>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="appointment in filteredAppointments" :key="appointment.id">
+                    <sl-card style="background-color: #ffffff !important;">
+                        <div class="p-4" style="background-color: #ffffff !important;">
+                            <div class="flex justify-between items-start mb-3">
+                                <h3 class="text-lg font-bold text-gray-800" x-text="appointment.hospital_name" style="color: #1f2937 !important;"></h3>
+                                <sl-badge :variant="isPastAppointment(appointment.appointment_date) ? 'neutral' : 'success'">
+                                    <span x-text="isPastAppointment(appointment.appointment_date) ? translations[currentLang].past : translations[currentLang].upcoming"></span>
+                                </sl-badge>
+                            </div>
+                            <div class="space-y-2 text-sm text-gray-700" style="color: #1f2937 !important;">
+                                <div class="flex items-center">
+                                    <span class="iconify mr-2" data-icon="mdi:hospital-building" style="color: #3b82f6;"></span>
+                                    <span x-text="appointment.department" style="color: #1f2937 !important;"></span>
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="iconify mr-2" data-icon="mdi:calendar" style="color: #10b981;"></span>
+                                    <span x-text="formatDate(appointment.appointment_date)" style="color: #1f2937 !important;"></span>
+                                </div>
+                                <div class="flex items-center" x-show="appointment.appointment_time">
+                                    <span class="iconify mr-2" data-icon="mdi:clock" style="color: #f59e0b;"></span>
+                                    <span x-text="appointment.appointment_time" style="color: #1f2937 !important;"></span>
+                                </div>
+                            </div>
+                            <div class="mt-4 flex gap-2">
+                                <sl-button size="small" variant="primary" @click="editAppointment(appointment)">
+                                    <span class="iconify" data-icon="mdi:pencil"></span>
+                                    <span x-text="translations[currentLang].edit"></span>
+                                </sl-button>
+                                <sl-button size="small" variant="danger" @click="deleteAppointment(appointment.id)">
+                                    <span class="iconify" data-icon="mdi:delete"></span>
+                                    <span x-text="translations[currentLang].delete"></span>
+                                </sl-button>
+                            </div>
+                        </div>
+                    </sl-card>
+                </template>
+            </div>
+        </div>
+
+        <sl-dialog :open="showAddDialog" @sl-request-close="showAddDialog = false" :label="translations[currentLang].addNew">
+            <form @submit.prevent="saveAppointment()" class="space-y-4">
+                <sl-select 
+                    x-model="formData.clinic_id" 
+                    :label="translations[currentLang].selectClinic"
+                    size="large"
+                    required>
+                    <template x-for="clinic in clinics" :key="clinic.id">
+                        <sl-option :value="clinic.id" x-text="`${clinic.hospital_name} - ${clinic.department}`"></sl-option>
+                    </template>
+                </sl-select>
+
+                <sl-input 
+                    type="date" 
+                    x-model="formData.appointment_date" 
+                    :label="translations[currentLang].appointmentDate"
+                    size="large"
+                    required>
+                </sl-input>
+
+                <sl-input 
+                    type="time" 
+                    x-model="formData.appointment_time" 
+                    :label="translations[currentLang].appointmentTime"
+                    size="large">
+                </sl-input>
+
+                <sl-button type="submit" variant="success" class="w-full" :loading="loading">
+                    <span x-text="translations[currentLang].save"></span>
+                </sl-button>
+            </form>
+        </sl-dialog>
+
+        <sl-dialog :open="showEditDialog" @sl-request-close="showEditDialog = false" :label="translations[currentLang].editAppointment">
+            <form @submit.prevent="updateAppointment()" class="space-y-4">
+                <sl-select 
+                    x-model="formData.clinic_id" 
+                    :label="translations[currentLang].selectClinic"
+                    size="large"
+                    required>
+                    <template x-for="clinic in clinics" :key="clinic.id">
+                        <sl-option :value="clinic.id" x-text="`${clinic.hospital_name} - ${clinic.department}`"></sl-option>
+                    </template>
+                </sl-select>
+
+                <sl-input 
+                    type="date" 
+                    x-model="formData.appointment_date" 
+                    :label="translations[currentLang].appointmentDate"
+                    size="large"
+                    required>
+                </sl-input>
+
+                <sl-input 
+                    type="time" 
+                    x-model="formData.appointment_time" 
+                    :label="translations[currentLang].appointmentTime"
+                    size="large">
+                </sl-input>
+
+                <sl-button type="submit" variant="primary" class="w-full" :loading="loading">
+                    <span x-text="translations[currentLang].update"></span>
+                </sl-button>
+            </form>
+        </sl-dialog>
+    </div>
+
+    <script>
+        function appointmentsData() {
+            return {
+                currentLang: 'ja',
+                loading: false,
+                successMessage: '',
+                errorMessage: '',
+                appointments: [],
+                filteredAppointments: [],
+                clinics: [],
+                filterClinic: '',
+                filterStatus: '',
+                showAddDialog: false,
+                showEditDialog: false,
+                formData: {
+                    id: null,
+                    clinic_id: '',
+                    appointment_date: '',
+                    appointment_time: ''
+                },
+                translations: {
+                    ja: {
+                        title: '通院履歴',
+                        subtitle: '通院予定と履歴の管理',
+                        addNew: '新規追加',
+                        filterByClinic: '病院で絞り込み',
+                        filterByStatus: 'ステータスで絞り込み',
+                        allClinics: 'すべての病院',
+                        allStatus: 'すべてのステータス',
+                        upcoming: '予定',
+                        past: '過去',
+                        noAppointments: '通院履歴がありません',
+                        selectClinic: '病院を選択',
+                        appointmentDate: '通院日',
+                        appointmentTime: '時間',
+                        save: '保存',
+                        update: '更新',
+                        edit: '編集',
+                        delete: '削除',
+                        editAppointment: '通院予定を編集',
+                        saveSuccess: '保存しました',
+                        updateSuccess: '更新しました',
+                        deleteSuccess: '削除しました',
+                        saveError: '保存に失敗しました',
+                        updateError: '更新に失敗しました',
+                        deleteError: '削除に失敗しました'
+                    },
+                    en: {
+                        title: 'Appointment History',
+                        subtitle: 'Manage Appointments and History',
+                        addNew: 'Add New',
+                        filterByClinic: 'Filter by Clinic',
+                        filterByStatus: 'Filter by Status',
+                        allClinics: 'All Clinics',
+                        allStatus: 'All Status',
+                        upcoming: 'Upcoming',
+                        past: 'Past',
+                        noAppointments: 'No appointments found',
+                        selectClinic: 'Select Clinic',
+                        appointmentDate: 'Appointment Date',
+                        appointmentTime: 'Time',
+                        save: 'Save',
+                        update: 'Update',
+                        edit: 'Edit',
+                        delete: 'Delete',
+                        editAppointment: 'Edit Appointment',
+                        saveSuccess: 'Saved successfully',
+                        updateSuccess: 'Updated successfully',
+                        deleteSuccess: 'Deleted successfully',
+                        saveError: 'Failed to save',
+                        updateError: 'Failed to update',
+                        deleteError: 'Failed to delete'
+                    }
+                },
+
+                async init() {
+                    const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                    this.currentLang = savedLang;
+
+                    const authToken = localStorage.getItem('authToken');
+                    if (!authToken) {
+                        window.location.href = '/login.html';
+                        return;
+                    }
+
+                    if (!localStorage.getItem('basicAuthToken')) {
+                        localStorage.setItem('basicAuthToken', btoa('admin:ClinicNote'));
+                    }
+
+                    AOS.init({ duration: 1000, once: true });
+                    await this.loadClinics();
+                    await this.loadAppointments();
+                },
+
+                switchLanguage(lang) {
+                    this.currentLang = lang;
+                    localStorage.setItem('clinicNoteLang', lang);
+                },
+
+                async loadClinics() {
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+
+                        const response = await fetch(`${API_URL}/api/clinics`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+
+                        if (response.ok) {
+                            this.clinics = await response.json();
+                        }
+                    } catch (err) {
+                        console.error('Load clinics error:', err);
+                    }
+                },
+
+                async loadAppointments() {
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+
+                        let url = `${API_URL}/api/appointments`;
+                        if (this.filterClinic) {
+                            url += `?clinic_id=${this.filterClinic}`;
+                        }
+
+                        const response = await fetch(url, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+
+                        if (response.ok) {
+                            this.appointments = await response.json();
+                            this.filterAppointments();
+                        }
+                    } catch (err) {
+                        console.error('Load appointments error:', err);
+                    }
+                },
+
+                filterAppointments() {
+                    let filtered = [...this.appointments];
+
+                    if (this.filterStatus === 'upcoming') {
+                        filtered = filtered.filter(a => !this.isPastAppointment(a.appointment_date));
+                    } else if (this.filterStatus === 'past') {
+                        filtered = filtered.filter(a => this.isPastAppointment(a.appointment_date));
+                    }
+
+                    this.filteredAppointments = filtered;
+                },
+
+                isPastAppointment(dateStr) {
+                    const appointmentDate = new Date(dateStr);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return appointmentDate < today;
+                },
+
+                formatDate(dateStr) {
+                    const date = new Date(dateStr);
+                    if (this.currentLang === 'ja') {
+                        return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+                    }
+                    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                },
+
+                async saveAppointment() {
+                    this.loading = true;
+                    this.successMessage = '';
+                    this.errorMessage = '';
+
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+
+                        const response = await fetch(`${API_URL}/api/appointments`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            },
+                            body: JSON.stringify({
+                                clinic_id: this.formData.clinic_id,
+                                appointment_date: this.formData.appointment_date,
+                                appointment_time: this.formData.appointment_time || null
+                            })
+                        });
+
+                        if (response.ok) {
+                            this.successMessage = this.translations[this.currentLang].saveSuccess;
+                            this.showAddDialog = false;
+                            this.formData = { id: null, clinic_id: '', appointment_date: '', appointment_time: '' };
+                            await this.loadAppointments();
+                        } else {
+                            this.errorMessage = this.translations[this.currentLang].saveError;
+                        }
+                    } catch (err) {
+                        this.errorMessage = this.translations[this.currentLang].saveError;
+                        console.error('Save appointment error:', err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                editAppointment(appointment) {
+                    this.formData = {
+                        id: appointment.id,
+                        clinic_id: appointment.clinic_id,
+                        appointment_date: appointment.appointment_date,
+                        appointment_time: appointment.appointment_time || ''
+                    };
+                    this.showEditDialog = true;
+                },
+
+                async updateAppointment() {
+                    this.loading = true;
+                    this.successMessage = '';
+                    this.errorMessage = '';
+
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+
+                        const response = await fetch(`${API_URL}/api/appointments/${this.formData.id}`, {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            },
+                            body: JSON.stringify({
+                                appointment_date: this.formData.appointment_date,
+                                appointment_time: this.formData.appointment_time || null
+                            })
+                        });
+
+                        if (response.ok) {
+                            this.successMessage = this.translations[this.currentLang].updateSuccess;
+                            this.showEditDialog = false;
+                            this.formData = { id: null, clinic_id: '', appointment_date: '', appointment_time: '' };
+                            await this.loadAppointments();
+                        } else {
+                            this.errorMessage = this.translations[this.currentLang].updateError;
+                        }
+                    } catch (err) {
+                        this.errorMessage = this.translations[this.currentLang].updateError;
+                        console.error('Update appointment error:', err);
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async deleteAppointment(id) {
+                    const confirmMsg = this.currentLang === 'ja' ? '本当に削除しますか？' : 'Are you sure to delete?';
+                    if (!confirm(confirmMsg)) return;
+
+                    try {
+                        const API_URL = 'https://clinic-note-api.onrender.com';
+                        const authToken = localStorage.getItem('authToken');
+                        const basicAuthToken = localStorage.getItem('basicAuthToken');
+
+                        const response = await fetch(`${API_URL}/api/appointments/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+
+                        if (response.ok) {
+                            this.successMessage = this.translations[this.currentLang].deleteSuccess;
+                            await this.loadAppointments();
+                        } else {
+                            this.errorMessage = this.translations[this.currentLang].deleteError;
+                        }
+                    } catch (err) {
+                        this.errorMessage = this.translations[this.currentLang].deleteError;
+                        console.error('Delete appointment error:', err);
+                    }
+                }
+            };
+        }
+    </script>
+</body>
+</html>
