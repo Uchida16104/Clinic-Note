@@ -81,6 +81,17 @@ router.put('/timezone', authenticateToken, async (req, res) => {
             return res.status(400).json({ error: 'タイムゾーンを指定してください' });
         }
 
+        const validTimezones = [
+            'Asia/Tokyo', 'America/New_York', 'America/Chicago', 'America/Denver',
+            'America/Los_Angeles', 'Europe/London', 'Europe/Paris', 'Asia/Shanghai',
+            'Asia/Hong_Kong', 'Asia/Singapore', 'Asia/Seoul', 'Australia/Sydney',
+            'Pacific/Auckland', 'UTC'
+        ];
+
+        if (!validTimezones.includes(timezone)) {
+            return res.status(400).json({ error: '無効なタイムゾーンです' });
+        }
+
         const { data: updatedUser, error } = await supabase
             .from('users')
             .update({ timezone })
