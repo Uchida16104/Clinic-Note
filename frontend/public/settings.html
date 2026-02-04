@@ -11,14 +11,25 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <script src="/js/timezone-utils.js"></script>
     <style>
         sl-input::part(base), sl-textarea::part(base), sl-select::part(combobox) {
             background-color: #ffffff !important;
             color: #1f2937 !important;
         }
-        sl-input::part(input), sl-textarea::part(textarea) {
+        sl-input::part(input), sl-textarea::part(textarea), sl-select::part(display-input) {
             background-color: #ffffff !important;
             color: #1f2937 !important;
+        }
+        sl-select::part(listbox) {
+            background-color: #ffffff !important;
+        }
+        sl-option::part(base) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-option:hover::part(base) {
+            background-color: #f3f4f6 !important;
         }
         sl-card {
             background-color: #ffffff !important;
@@ -65,6 +76,22 @@
             </sl-alert>
 
             <div class="space-y-6">
+                <div>
+                    <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
+                        <span class="iconify text-indigo-600 mr-2" data-icon="mdi:clock-outline"></span>
+                        <span x-text="translations[currentLang].timezoneSettings"></span>
+                    </h2>
+                    <sl-select 
+                        x-model="settings.timezone"
+                        :label="translations[currentLang].timezoneLabel"
+                        size="large">
+                        <template x-for="tz in timezones" :key="tz.value">
+                            <sl-option :value="tz.value" x-text="tz.label"></sl-option>
+                        </template>
+                    </sl-select>
+                    <small class="text-gray-500" x-text="translations[currentLang].timezoneHint"></small>
+                </div>
+
                 <div>
                     <h2 class="text-2xl font-bold mb-4 flex items-center text-gray-800">
                         <span class="iconify text-indigo-600 mr-2" data-icon="mdi:email"></span>
@@ -141,13 +168,33 @@
                 errorMessage: '',
                 settings: {
                     email: '',
+                    timezone: 'Asia/Tokyo',
                     notification_days_before: '1',
                     push_enabled: false
                 },
+                timezones: [
+                    { value: 'Asia/Tokyo', label: '日本標準時 (JST) - UTC+9' },
+                    { value: 'America/New_York', label: '米国東部標準時 (EST) - UTC-5' },
+                    { value: 'America/Chicago', label: '米国中部標準時 (CST) - UTC-6' },
+                    { value: 'America/Denver', label: '米国山岳部標準時 (MST) - UTC-7' },
+                    { value: 'America/Los_Angeles', label: '米国太平洋標準時 (PST) - UTC-8' },
+                    { value: 'Europe/London', label: 'グリニッジ標準時 (GMT) - UTC+0' },
+                    { value: 'Europe/Paris', label: '中央ヨーロッパ標準時 (CET) - UTC+1' },
+                    { value: 'Asia/Shanghai', label: '中国標準時 (CST) - UTC+8' },
+                    { value: 'Asia/Hong_Kong', label: '香港標準時 (HKT) - UTC+8' },
+                    { value: 'Asia/Singapore', label: 'シンガポール標準時 (SGT) - UTC+8' },
+                    { value: 'Asia/Seoul', label: '韓国標準時 (KST) - UTC+9' },
+                    { value: 'Australia/Sydney', label: 'オーストラリア東部標準時 (AEST) - UTC+10' },
+                    { value: 'Pacific/Auckland', label: 'ニュージーランド標準時 (NZST) - UTC+12' },
+                    { value: 'UTC', label: '協定世界時 (UTC)' }
+                ],
                 translations: {
                     ja: {
-                        title: '通知設定',
-                        subtitle: 'リマインダー通知の設定',
+                        title: '設定',
+                        subtitle: '通知とタイムゾーンの設定',
+                        timezoneSettings: 'タイムゾーン設定',
+                        timezoneLabel: 'タイムゾーン',
+                        timezoneHint: 'お住まいの地域のタイムゾーンを選択してください。すべての日時表示がこのタイムゾーンで表示されます。',
                         emailSettings: 'メール通知',
                         emailLabel: 'メールアドレス',
                         emailPlaceholder: 'example@example.com',
@@ -172,8 +219,11 @@
                         pushNotSupported: 'このブラウザはプッシュ通知に対応していません'
                     },
                     en: {
-                        title: 'Notification Settings',
-                        subtitle: 'Configure Reminder Notifications',
+                        title: 'Settings',
+                        subtitle: 'Configure Notifications and Timezone',
+                        timezoneSettings: 'Timezone Settings',
+                        timezoneLabel: 'Timezone',
+                        timezoneHint: 'Select your local timezone. All dates and times will be displayed in this timezone.',
                         emailSettings: 'Email Notifications',
                         emailLabel: 'Email Address',
                         emailPlaceholder: 'example@example.com',
@@ -236,18 +286,32 @@
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
                         
-                        const response = await fetch(`${API_URL}/api/notifications/settings`, {
+                        const profileResponse = await fetch(`${API_URL}/api/users/profile`, {
                             headers: {
                                 'Authorization': `Bearer ${authToken}`,
                                 'X-Basic-Auth': basicAuthToken
                             }
                         });
                         
-                        if (response.ok) {
-                            const data = await response.json();
-                            this.settings.email = data.email || '';
-                            this.settings.notification_days_before = String(data.notification_days_before || 1);
-                            this.settings.push_enabled = data.push_enabled || false;
+                        if (profileResponse.ok) {
+                            const profileData = await profileResponse.json();
+                            this.settings.timezone = profileData.user.timezone || 'Asia/Tokyo';
+                            this.settings.email = profileData.user.email || '';
+                            this.settings.notification_days_before = String(profileData.user.notification_days_before || 1);
+                            
+                            setUserTimezone(this.settings.timezone);
+                        }
+                        
+                        const notifResponse = await fetch(`${API_URL}/api/notifications/settings`, {
+                            headers: {
+                                'Authorization': `Bearer ${authToken}`,
+                                'X-Basic-Auth': basicAuthToken
+                            }
+                        });
+                        
+                        if (notifResponse.ok) {
+                            const notifData = await notifResponse.json();
+                            this.settings.push_enabled = notifData.push_enabled || false;
                         }
                     } catch (err) {
                         console.error('Load settings error:', err);
@@ -264,7 +328,7 @@
                         const authToken = localStorage.getItem('authToken');
                         const basicAuthToken = localStorage.getItem('basicAuthToken');
                         
-                        const response = await fetch(`${API_URL}/api/notifications/settings`, {
+                        const profileResponse = await fetch(`${API_URL}/api/users/profile`, {
                             method: 'PUT',
                             headers: {
                                 'Content-Type': 'application/json',
@@ -273,11 +337,14 @@
                             },
                             body: JSON.stringify({
                                 email: this.settings.email,
+                                timezone: this.settings.timezone,
                                 notification_days_before: parseInt(this.settings.notification_days_before)
                             })
                         });
                         
-                        if (response.ok) {
+                        if (profileResponse.ok) {
+                            setUserTimezone(this.settings.timezone);
+                            localStorage.setItem('userTimezone', this.settings.timezone);
                             this.successMessage = this.translations[this.currentLang].saveSuccess;
                         } else {
                             this.errorMessage = this.translations[this.currentLang].saveError;
