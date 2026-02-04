@@ -17,7 +17,7 @@ const usersRoutes = require('./routes/users');
 const basicAuthMiddleware = require('./middleware/basicAuth');
 
 const { initDatabase } = require('./db/database');
-const { processReminders } = require('./services/notification');
+const { processReminders, resetReminderFlags } = require('./services/notification');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -120,11 +120,18 @@ app.use((err, req, res, next) => {
     });
 });
 
-cron.schedule('0 9 * * *', async () => {
-    console.log('Running scheduled reminder check at 9:00 AM...');
+cron.schedule('0 */1 * * *', async () => {
+    console.log('Running hourly reminder check...');
     await processReminders();
 }, {
-    timezone: 'Asia/Tokyo'
+    timezone: 'UTC'
+});
+
+cron.schedule('0 0 * * *', async () => {
+    console.log('Running daily reminder flag reset...');
+    await resetReminderFlags();
+}, {
+    timezone: 'UTC'
 });
 
 async function startServer() {
@@ -145,7 +152,8 @@ async function startServer() {
 ║   Health Check: http://localhost:${PORT}/health${' '.repeat(14)}║
 ║   API Docs: http://localhost:${PORT}/${' '.repeat(19)}║
 ║                                                       ║
-║   Reminder Scheduler: Active (9:00 AM daily)         ║
+║   Reminder Scheduler: Active (Hourly check)          ║
+║   Flag Reset: Active (Daily at midnight UTC)         ║
 ║                                                       ║
 ╚═══════════════════════════════════════════════════════╝
             `);
