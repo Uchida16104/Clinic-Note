@@ -4,6 +4,33 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { supabase } = require('../db/database');
 
+function verifyToken(req, res, next) {
+    try {
+        const authHeader = req.headers.authorization;
+        
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: '認証トークンが必要です' });
+        }
+        
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        
+        req.user = {
+            userId: decoded.userId,
+            username: decoded.username
+        };
+        
+        next();
+    } catch (err) {
+        console.error('Token verification error:', err);
+        return res.status(401).json({ error: '認証に失敗しました' });
+    }
+}
+
+function authenticateToken(req, res, next) {
+    return verifyToken(req, res, next);
+}
+
 router.post('/register', async (req, res) => {
     try {
         const { username, password, timezone = 'Asia/Tokyo' } = req.body;
@@ -52,6 +79,8 @@ router.post('/register', async (req, res) => {
         res.status(201).json({
             message: 'ユーザー登録が完了しました',
             token,
+            userId: newUser.id,
+            timezone: newUser.timezone,
             user: {
                 id: newUser.id,
                 username: newUser.username,
@@ -99,6 +128,8 @@ router.post('/login', async (req, res) => {
         res.json({
             message: 'ログインに成功しました',
             token,
+            userId: user.id,
+            timezone: user.timezone,
             user: {
                 id: user.id,
                 username: user.username,
@@ -113,20 +144,12 @@ router.post('/login', async (req, res) => {
     }
 });
 
-router.get('/verify', async (req, res) => {
+router.get('/verify', verifyToken, async (req, res) => {
     try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-
-        if (!token) {
-            return res.status(401).json({ error: '認証トークンが必要です' });
-        }
-
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-
         const { data: user, error } = await supabase
             .from('users')
             .select('id, username, timezone, email, notification_days_before')
-            .eq('id', decoded.userId)
+            .eq('id', req.user.userId)
             .maybeSingle();
 
         if (error || !user) {
@@ -149,3 +172,5 @@ router.get('/verify', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.verifyToken = verifyToken;
+module.exports.authenticateToken = authenticateToken;
