@@ -10,14 +10,40 @@ webpush.setVapidDetails(
     process.env.WEB_PUSH_PRIVATE_KEY
 );
 
-async function sendEmailReminder(userEmail, username, hospitalName, department, appointmentDate, appointmentTime) {
+function convertToUserTimezone(date, timezone) {
+    const utcDate = new Date(date);
+    return new Intl.DateTimeFormat('ja-JP', {
+        timeZone: timezone,
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long'
+    }).format(utcDate);
+}
+
+function isReminderDay(appointmentDate, userTimezone, notificationDaysBefore) {
+    const now = new Date();
+    
+    const userNowStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: userTimezone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(now);
+    
+    const userToday = new Date(userNowStr);
+    
+    const appointmentDateObj = new Date(appointmentDate);
+    
+    const diffTime = appointmentDateObj - userToday;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays === notificationDaysBefore;
+}
+
+async function sendEmailReminder(userEmail, username, hospitalName, department, appointmentDate, appointmentTime, timezone) {
     try {
-        const formattedDate = new Date(appointmentDate).toLocaleDateString('ja-JP', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            weekday: 'long'
-        });
+        const formattedDate = convertToUserTimezone(appointmentDate, timezone);
         
         const timeStr = appointmentTime ? ` ${appointmentTime}` : '';
         
@@ -29,7 +55,7 @@ async function sendEmailReminder(userEmail, username, hospitalName, department, 
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #4F46E5;">通院リマインダー</h2>
                     <p>こんにちは、${username}さん</p>
-                    <p>明日は通院の予定日です。</p>
+                    <p>通院の予定日が近づいています。</p>
                     <div style="background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
                         <p style="margin: 5px 0;"><strong>病院名:</strong> ${hospitalName}</p>
                         <p style="margin: 5px 0;"><strong>診療科目:</strong> ${department}</p>
@@ -88,6 +114,17 @@ async function sendPushNotification(userId, title, body, data = {}) {
         return true;
     } catch (err) {
         console.error('Send push notification error:', err);
+        if (err.statusCode === 410) {
+            try {
+                await supabase
+                    .from('users')
+                    .update({ push_subscription: null })
+                    .eq('id', userId);
+                console.log('Removed expired push subscription for user:', userId);
+            } catch (cleanupErr) {
+                console.error('Failed to clean up expired subscription:', cleanupErr);
+            }
+        }
         return false;
     }
 }
@@ -96,62 +133,135 @@ async function processReminders() {
     try {
         console.log('Processing reminders...');
         
-        const { data: reminders, error } = await supabase.rpc('get_upcoming_reminders');
+        const { data: users, error: usersError } = await supabase
+            .from('users')
+            .select('id, username, email, timezone, notification_days_before, push_subscription');
         
-        if (error) {
-            console.error('Get reminders error:', error);
+        if (usersError) {
+            console.error('Get users error:', usersError);
             return;
         }
         
-        if (!reminders || reminders.length === 0) {
-            console.log('No reminders to send');
+        if (!users || users.length === 0) {
+            console.log('No users found');
             return;
         }
         
-        console.log(`Found ${reminders.length} reminders to send`);
+        let totalReminders = 0;
         
-        for (const reminder of reminders) {
-            const emailSent = await sendEmailReminder(
-                reminder.user_email,
-                reminder.username,
-                reminder.hospital_name,
-                reminder.department,
-                reminder.appointment_date,
-                reminder.appointment_time
-            );
+        for (const user of users) {
+            if (!user.email && !user.push_subscription) {
+                continue;
+            }
             
-            const pushSent = await sendPushNotification(
-                reminder.user_id,
-                '通院リマインダー',
-                `${reminder.hospital_name} - ${reminder.department}の予定があります`,
-                {
-                    url: `${process.env.FRONTEND_URL}/calendar.html`,
-                    appointmentId: reminder.appointment_id
-                }
-            );
+            const timezone = user.timezone || 'Asia/Tokyo';
+            const notificationDaysBefore = user.notification_days_before || 1;
             
-            if (emailSent || pushSent) {
-                const { error: updateError } = await supabase
-                    .from('appointments')
-                    .update({ reminder_sent: true })
-                    .eq('id', reminder.appointment_id);
-                
-                if (updateError) {
-                    console.error('Update reminder status error:', updateError);
-                } else {
-                    console.log(`Reminder sent for appointment ${reminder.appointment_id}`);
+            const { data: appointments, error: appointmentsError } = await supabase
+                .from('appointments')
+                .select(`
+                    id,
+                    appointment_date,
+                    appointment_time,
+                    reminder_sent,
+                    clinics (
+                        hospital_name,
+                        department
+                    )
+                `)
+                .eq('user_id', user.id)
+                .eq('reminder_sent', false)
+                .gte('appointment_date', new Date().toISOString().split('T')[0]);
+            
+            if (appointmentsError) {
+                console.error('Get appointments error for user', user.id, ':', appointmentsError);
+                continue;
+            }
+            
+            if (!appointments || appointments.length === 0) {
+                continue;
+            }
+            
+            for (const appointment of appointments) {
+                if (isReminderDay(appointment.appointment_date, timezone, notificationDaysBefore)) {
+                    let emailSent = false;
+                    let pushSent = false;
+                    
+                    if (user.email) {
+                        emailSent = await sendEmailReminder(
+                            user.email,
+                            user.username,
+                            appointment.clinics.hospital_name,
+                            appointment.clinics.department,
+                            appointment.appointment_date,
+                            appointment.appointment_time,
+                            timezone
+                        );
+                    }
+                    
+                    if (user.push_subscription) {
+                        pushSent = await sendPushNotification(
+                            user.id,
+                            '通院リマインダー',
+                            `${appointment.clinics.hospital_name} - ${appointment.clinics.department}の予定があります`,
+                            {
+                                url: `${process.env.FRONTEND_URL}/calendar.html`,
+                                appointmentId: appointment.id
+                            }
+                        );
+                    }
+                    
+                    if (emailSent || pushSent) {
+                        const { error: updateError } = await supabase
+                            .from('appointments')
+                            .update({ reminder_sent: true })
+                            .eq('id', appointment.id);
+                        
+                        if (updateError) {
+                            console.error('Update reminder status error:', updateError);
+                        } else {
+                            totalReminders++;
+                            console.log(`Reminder sent for appointment ${appointment.id} (User: ${user.id})`);
+                        }
+                    }
                 }
             }
         }
         
-        console.log('Reminders processing completed');
+        console.log(`Reminders processing completed. Total reminders sent: ${totalReminders}`);
     } catch (err) {
         console.error('Process reminders error:', err);
+    }
+}
+
+async function resetReminderFlags() {
+    try {
+        console.log('Resetting reminder flags for past appointments...');
+        
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toISOString().split('T')[0];
+        
+        const { data, error } = await supabase
+            .from('appointments')
+            .update({ reminder_sent: false })
+            .lt('appointment_date', yesterdayStr)
+            .eq('reminder_sent', true)
+            .select();
+        
+        if (error) {
+            console.error('Reset reminder flags error:', error);
+        } else {
+            console.log(`Reset reminder flags for ${data?.length || 0} appointments`);
+        }
+    } catch (err) {
+        console.error('Reset reminder flags error:', err);
     }
 }
 
 module.exports = {
     sendEmailReminder,
     sendPushNotification,
-    processReminders
+    processReminders,
+    resetReminderFlags
 };
