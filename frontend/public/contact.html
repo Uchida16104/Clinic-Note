@@ -168,7 +168,7 @@
                     this.currentLang = savedLang;
                     AOS.init({ duration: 1000, once: true });
 
-                    emailjs.init('YOUR_EMAILJS_PUBLIC_KEY');
+                    emailjs.init('T01AZMGjUWoJO_TM_');
                 },
 
                 switchLanguage(lang) {
@@ -194,8 +194,8 @@
 
                         if (this.formData.inquiryType === 'basic_auth') {
                             await emailjs.send(
-                                'YOUR_SERVICE_ID',
-                                'template_basic_auth',
+                                'service_m58rach',
+                                'template_sf7sv9p',
                                 {
                                     user_email: this.formData.email,
                                     username: 'admin',
@@ -205,8 +205,8 @@
                             );
                         } else {
                             await emailjs.send(
-                                'YOUR_SERVICE_ID',
-                                'template_inquiry',
+                                'service_3ujie1g',
+                                'template_ve6y3im',
                                 {
                                     to_email: 'contact.hirotoshiuchida@gmail.com',
                                     from_email: this.formData.email,
