@@ -167,7 +167,6 @@
                     const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
                     this.currentLang = savedLang;
                     AOS.init({ duration: 1000, once: true });
-
                     emailjs.init('T01AZMGjUWoJO_TM_');
                 },
 
@@ -182,38 +181,31 @@
                     this.errorMessage = '';
 
                     try {
-                        const templateParams = {
-                            to_email: 'contact.hirotoshiuchida@gmail.com',
-                            from_email: this.formData.email,
-                            inquiry_type: this.formData.inquiryType,
-                            subject: this.formData.subject || (this.formData.inquiryType === 'basic_auth' ? 'BASIC認証情報の取得' : ''),
-                            message: this.formData.inquiryType === 'basic_auth' 
-                                ? 'BASIC認証のユーザー名: admin\nパスワード: ClinicNote'
-                                : this.formData.message
-                        };
-
                         if (this.formData.inquiryType === 'basic_auth') {
-                            await emailjs.send(
+                            const response = await emailjs.send(
                                 'service_m58rach',
                                 'template_sf7sv9p',
                                 {
+                                    to_email: this.formData.email,
                                     user_email: this.formData.email,
                                     username: 'admin',
-                                    password: 'ClinicNote',
-                                    to_email: this.formData.email
+                                    password: 'ClinicNote'
                                 }
                             );
+                            console.log('EmailJS BASIC Auth response:', response);
                         } else {
-                            await emailjs.send(
+                            const response = await emailjs.send(
                                 'service_3ujie1g',
                                 'template_ve6y3im',
                                 {
                                     to_email: 'contact.hirotoshiuchida@gmail.com',
                                     from_email: this.formData.email,
+                                    reply_to: this.formData.email,
                                     subject: this.formData.subject,
                                     message: this.formData.message
                                 }
                             );
+                            console.log('EmailJS inquiry response:', response);
                         }
 
                         this.successMessage = this.translations[this.currentLang].sendSuccess;
@@ -225,7 +217,8 @@
                         };
                     } catch (err) {
                         console.error('Send email error:', err);
-                        this.errorMessage = this.translations[this.currentLang].sendError;
+                        console.error('Error details:', JSON.stringify(err, null, 2));
+                        this.errorMessage = this.translations[this.currentLang].sendError + ' (' + (err.text || err.message || 'Unknown error') + ')';
                     } finally {
                         this.loading = false;
                     }
