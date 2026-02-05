@@ -22,6 +22,8 @@ const { processReminders, resetReminderFlags } = require('./services/notificatio
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+app.set('trust proxy', 1);
+
 app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
@@ -52,7 +54,10 @@ const limiter = rateLimit({
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
     standardHeaders: true,
     legacyHeaders: false,
-    message: 'Too many requests from this IP, please try again later.'
+    message: 'Too many requests from this IP, please try again later.',
+    skip: (req) => {
+        return false;
+    }
 });
 app.use('/api/', limiter);
 
@@ -145,7 +150,7 @@ async function startServer() {
 ║                                                       ║
 ║           Clinic Note API Server                     ║
 ║                                                       ║
-║   Environment: ${process.env.NODE_ENV?.padEnd(37) || 'development'.padEnd(37)}║
+║   Environment: ${(process.env.NODE_ENV || 'development').padEnd(37)}║
 ║   Port: ${PORT.toString().padEnd(43)}║
 ║   Status: Running                                    ║
 ║                                                       ║
