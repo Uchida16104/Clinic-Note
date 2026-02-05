@@ -68,10 +68,8 @@
                     <sl-select 
                         x-model="formData.inquiryType"
                         size="large"
-                        required
-                        @sl-change="onInquiryTypeChange()">
+                        required>
                         <sl-option value="basic_auth" x-text="translations[currentLang].basicAuth"></sl-option>
-                        <sl-option value="other" x-text="translations[currentLang].other"></sl-option>
                     </sl-select>
                 </div>
 
@@ -87,7 +85,7 @@
                     </sl-input>
                 </div>
 
-                <div x-show="formData.inquiryType === 'other'" x-transition>
+                <div x-show="formData.inquiryType === 'other'">
                     <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].subject"></label>
                     <sl-input 
                         x-model="formData.subject"
@@ -97,7 +95,7 @@
                     </sl-input>
                 </div>
 
-                <div x-show="formData.inquiryType === 'other'" x-transition>
+                <div x-show="formData.inquiryType === 'other'">
                     <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].message"></label>
                     <sl-textarea 
                         x-model="formData.message"
@@ -134,8 +132,8 @@
                         title: 'お問い合わせ',
                         subtitle: 'ご質問やご要望をお送りください',
                         inquiryType: 'お問い合わせ種別',
-                        basicAuth: 'BASIC認証情報の取得（Get BASIC Authentication）',
-                        other: 'その他（Others）',
+                        basicAuth: 'BASIC認証情報の取得',
+                        other: 'その他のお問い合わせ',
                         email: 'メールアドレス',
                         emailPlaceholder: 'your@email.com',
                         subject: '件名',
@@ -151,7 +149,7 @@
                         subtitle: 'Send us your questions or requests',
                         inquiryType: 'Inquiry Type',
                         basicAuth: 'Get BASIC Authentication',
-                        other: 'Others',
+                        other: 'Other Inquiry',
                         email: 'Email Address',
                         emailPlaceholder: 'your@email.com',
                         subject: 'Subject',
@@ -174,13 +172,6 @@
                 switchLanguage(lang) {
                     this.currentLang = lang;
                     localStorage.setItem('clinicNoteLang', lang);
-                },
-
-                onInquiryTypeChange() {
-                    if (this.formData.inquiryType === 'basic_auth') {
-                        this.formData.subject = '';
-                        this.formData.message = '';
-                    }
                 },
 
                 async sendEmail() {
