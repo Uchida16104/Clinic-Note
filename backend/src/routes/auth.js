@@ -67,6 +67,26 @@ router.post('/register', async (req, res) => {
 
         if (error) {
             console.error('User creation error:', error);
+            
+            if (error.code === '23505') {
+                const { data: maxIdResult } = await supabase
+                    .from('users')
+                    .select('id')
+                    .order('id', { ascending: false })
+                    .limit(1)
+                    .single();
+                
+                if (maxIdResult) {
+                    const nextId = maxIdResult.id + 1;
+                    await supabase.rpc('setval', {
+                        sequence_name: 'users_id_seq',
+                        new_value: nextId
+                    });
+                }
+                
+                return res.status(500).json({ error: 'ユーザー登録に失敗しました。もう一度お試しください。' });
+            }
+            
             return res.status(500).json({ error: 'ユーザー登録に失敗しました' });
         }
 
