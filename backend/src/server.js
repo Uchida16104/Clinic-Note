@@ -19,6 +19,8 @@ const basicAuthMiddleware = require('./middleware/basicAuth');
 const { initDatabase } = require('./db/database');
 const { processReminders, resetReminderFlags } = require('./services/notification');
 
+const { startAppointmentReminderCron } = require('./cron/appointment-reminders');
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 
@@ -162,6 +164,10 @@ async function startServer() {
 ║                                                       ║
 ╚═══════════════════════════════════════════════════════╝
             `);
+            startAppointmentReminderCron();
+            console.log('✓ Appointment reminder cron job initialized');
+            const { processAppointmentReminders } = require('./cron/appointment-reminders');
+            processAppointmentReminders();
         });
 
         process.on('SIGTERM', () => {
