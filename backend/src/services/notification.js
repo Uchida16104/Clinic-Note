@@ -1,5 +1,6 @@
 const { Resend } = require('resend');
 const webpush = require('web-push');
+const nodemailer = require('nodemailer');
 const { supabase } = require('../db/database');
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -9,6 +10,16 @@ webpush.setVapidDetails(
     process.env.WEB_PUSH_PUBLIC_KEY,
     process.env.WEB_PUSH_PRIVATE_KEY
 );
+
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: false,
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
+});
 
 function convertToUserTimezone(date, timezone) {
     const utcDate = new Date(date);
@@ -39,6 +50,73 @@ function isReminderDay(appointmentDate, userTimezone, notificationDaysBefore) {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     return diffDays === notificationDaysBefore;
+}
+
+async function sendEmailReminderViaNodemailer(userEmail, username, hospitalName, department, appointmentDate, appointmentTime, timezone, language = 'ja') {
+    try {
+        const formattedDate = convertToUserTimezone(appointmentDate, timezone);
+        const timeStr = appointmentTime ? ` ${appointmentTime}` : '';
+        
+        const translations = {
+            ja: {
+                subject: `通院リマインダー - ${hospitalName}`,
+                greeting: `こんにちは、${username}さん`,
+                message: '通院の予定日が近づいています。',
+                hospital: '病院名',
+                department: '診療科目',
+                datetime: '日時',
+                footer: 'お忘れなくお越しください。',
+                autoMessage: 'このメールはClinic Noteから自動送信されています。',
+                dashboardLink: 'ダッシュボードを開く'
+            },
+            en: {
+                subject: `Appointment Reminder - ${hospitalName}`,
+                greeting: `Hello ${username},`,
+                message: 'Your appointment is coming up soon.',
+                hospital: 'Hospital',
+                department: 'Department',
+                datetime: 'Date & Time',
+                footer: 'Please remember to attend.',
+                autoMessage: 'This is an automated message from Clinic Note.',
+                dashboardLink: 'Open Dashboard'
+            }
+        };
+        
+        const t = translations[language] || translations['ja'];
+        
+        const mailOptions = {
+            from: `"${process.env.SMTP_FROM_NAME || 'Clinic Note'}" <${process.env.SMTP_FROM_EMAIL || 'noreply@clinicnote.app'}>`,
+            to: userEmail,
+            subject: t.subject,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #4F46E5;">${t.subject}</h2>
+                    <p>${t.greeting}</p>
+                    <p>${t.message}</p>
+                    <div style="background-color: #F3F4F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                        <p style="margin: 5px 0;"><strong>${t.hospital}:</strong> ${hospitalName}</p>
+                        <p style="margin: 5px 0;"><strong>${t.department}:</strong> ${department}</p>
+                        <p style="margin: 5px 0;"><strong>${t.datetime}:</strong> ${formattedDate}${timeStr}</p>
+                    </div>
+                    <p>${t.footer}</p>
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid #E5E7EB;">
+                    <p style="font-size: 12px; color: #6B7280;">
+                        ${t.autoMessage}
+                        <br>
+                        <a href="${process.env.FRONTEND_URL}/dashboard.html" style="color: #4F46E5;">${t.dashboardLink}</a>
+                    </p>
+                </div>
+            `
+        };
+        
+        await transporter.sendMail(mailOptions);
+        
+        console.log('Email sent successfully via Nodemailer to:', userEmail);
+        return true;
+    } catch (err) {
+        console.error('Send email via Nodemailer error:', err);
+        return false;
+    }
 }
 
 async function sendEmailReminder(userEmail, username, hospitalName, department, appointmentDate, appointmentTime, timezone) {
@@ -156,6 +234,7 @@ async function processReminders() {
             
             const timezone = user.timezone || 'Asia/Tokyo';
             const notificationDaysBefore = user.notification_days_before || 1;
+            const userLanguage = timezone.includes('Asia/Tokyo') ? 'ja' : 'en';
             
             const { data: appointments, error: appointmentsError } = await supabase
                 .from('appointments')
@@ -188,22 +267,40 @@ async function processReminders() {
                     let pushSent = false;
                     
                     if (user.email) {
-                        emailSent = await sendEmailReminder(
+                        emailSent = await sendEmailReminderViaNodemailer(
                             user.email,
                             user.username,
                             appointment.clinics.hospital_name,
                             appointment.clinics.department,
                             appointment.appointment_date,
                             appointment.appointment_time,
-                            timezone
+                            timezone,
+                            userLanguage
                         );
+                        
+                        if (!emailSent) {
+                            emailSent = await sendEmailReminder(
+                                user.email,
+                                user.username,
+                                appointment.clinics.hospital_name,
+                                appointment.clinics.department,
+                                appointment.appointment_date,
+                                appointment.appointment_time,
+                                timezone
+                            );
+                        }
                     }
                     
                     if (user.push_subscription) {
+                        const pushTitle = userLanguage === 'ja' ? '通院リマインダー' : 'Appointment Reminder';
+                        const pushBody = userLanguage === 'ja' 
+                            ? `${appointment.clinics.hospital_name} - ${appointment.clinics.department}の予定があります`
+                            : `You have an appointment at ${appointment.clinics.hospital_name} - ${appointment.clinics.department}`;
+                        
                         pushSent = await sendPushNotification(
                             user.id,
-                            '通院リマインダー',
-                            `${appointment.clinics.hospital_name} - ${appointment.clinics.department}の予定があります`,
+                            pushTitle,
+                            pushBody,
                             {
                                 url: `${process.env.FRONTEND_URL}/calendar.html`,
                                 appointmentId: appointment.id
@@ -261,6 +358,7 @@ async function resetReminderFlags() {
 
 module.exports = {
     sendEmailReminder,
+    sendEmailReminderViaNodemailer,
     sendPushNotification,
     processReminders,
     resetReminderFlags
