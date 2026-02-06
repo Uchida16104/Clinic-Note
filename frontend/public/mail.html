@@ -1,0 +1,322 @@
+<div x-data="mailForm()" x-init="init()" class="max-w-2xl mx-auto" data-aos="fade-up">
+    <sl-card style="background-color: #ffffff !important;">
+        <div class="p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl font-bold text-gray-800" x-text="translations[currentLang].title"></h2>
+                <div class="flex gap-2">
+                    <sl-button-group label="Language">
+                        <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'" size="small">
+                            <span class="iconify" data-icon="twemoji:flag-japan"></span>
+                        </sl-button>
+                        <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'" size="small">
+                            <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                        </sl-button>
+                    </sl-button-group>
+                    <sl-button variant="default" size="small" @click="window.location.href='/contact.html'">
+                        <span class="iconify" data-icon="mdi:arrow-left"></span>
+                    </sl-button>
+                </div>
+            </div>
+
+            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''" class="mb-4">
+                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                <span x-text="successMessage"></span>
+            </sl-alert>
+
+            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''" class="mb-4">
+                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
+                <span x-text="errorMessage"></span>
+            </sl-alert>
+
+            <div x-show="!termsAccepted">
+                <form @submit.prevent="handleSubmit()" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].email"></label>
+                        <sl-input 
+                            type="email"
+                            x-model="formData.email"
+                            :placeholder="translations[currentLang].emailPlaceholder"
+                            size="large"
+                            required
+                            style="--sl-input-background-color: #ffffff; --sl-input-color: #1f2937;">
+                            <span slot="prefix" class="iconify" data-icon="mdi:email"></span>
+                        </sl-input>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].subject"></label>
+                        <sl-input 
+                            x-model="formData.subject"
+                            :placeholder="translations[currentLang].subjectPlaceholder"
+                            size="large"
+                            required
+                            style="--sl-input-background-color: #ffffff; --sl-input-color: #1f2937;">
+                        </sl-input>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].message"></label>
+                        <sl-textarea 
+                            x-model="formData.message"
+                            :placeholder="translations[currentLang].messagePlaceholder"
+                            rows="6"
+                            resize="auto"
+                            required
+                            style="--sl-input-background-color: #ffffff; --sl-input-color: #1f2937;">
+                        </sl-textarea>
+                    </div>
+
+                    <sl-button 
+                        type="button" 
+                        variant="primary" 
+                        size="large" 
+                        class="w-full"
+                        @click="showTerms = true">
+                        <span class="iconify mr-2" data-icon="mdi:arrow-right"></span>
+                        <span x-text="translations[currentLang].next"></span>
+                    </sl-button>
+                </form>
+            </div>
+
+            <div x-show="showTerms && !termsAccepted" x-transition>
+                <h3 class="text-lg font-bold mb-4 text-gray-800" x-text="translations[currentLang].termsTitle"></h3>
+                <div class="max-h-64 overflow-y-auto p-4 bg-gray-50 rounded-lg mb-4 border border-gray-200">
+                    <div x-html="translations[currentLang].termsContent" class="text-gray-800"></div>
+                </div>
+                
+                <div class="flex gap-4 mb-4">
+                    <sl-button 
+                        type="button"
+                        variant="success" 
+                        size="large"
+                        class="flex-1"
+                        @click="acceptTerms()">
+                        <span class="iconify mr-2" data-icon="mdi:check-circle"></span>
+                        <span x-text="translations[currentLang].accept"></span>
+                    </sl-button>
+                    <sl-button 
+                        type="button"
+                        variant="danger" 
+                        size="large"
+                        class="flex-1"
+                        @click="rejectTerms()">
+                        <span class="iconify mr-2" data-icon="mdi:close-circle"></span>
+                        <span x-text="translations[currentLang].reject"></span>
+                    </sl-button>
+                </div>
+            </div>
+
+            <div x-show="termsAccepted && !emailSent" x-transition>
+                <sl-alert variant="primary" open class="mb-6">
+                    <span class="iconify slot-icon" data-icon="mdi:information"></span>
+                    <span x-text="translations[currentLang].confirmMessage"></span>
+                </sl-alert>
+
+                <div class="bg-gray-50 p-6 rounded-lg mb-6 border border-gray-200">
+                    <div class="space-y-4">
+                        <div>
+                            <strong class="text-gray-800" x-text="translations[currentLang].email + ':'"></strong>
+                            <p class="text-gray-600" x-text="formData.email"></p>
+                        </div>
+                        <div>
+                            <strong class="text-gray-800" x-text="translations[currentLang].subject + ':'"></strong>
+                            <p class="text-gray-600" x-text="formData.subject"></p>
+                        </div>
+                        <div>
+                            <strong class="text-gray-800" x-text="translations[currentLang].message + ':'"></strong>
+                            <p class="text-gray-600 whitespace-pre-wrap" x-text="formData.message"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <sl-button 
+                        type="button"
+                        variant="primary" 
+                        size="large"
+                        class="flex-1"
+                        :loading="loading"
+                        @click="sendEmail()">
+                        <span class="iconify mr-2" data-icon="mdi:send"></span>
+                        <span x-text="translations[currentLang].send"></span>
+                    </sl-button>
+                    <sl-button 
+                        type="button"
+                        variant="default" 
+                        size="large"
+                        class="flex-1"
+                        @click="editForm()">
+                        <span class="iconify mr-2" data-icon="mdi:pencil"></span>
+                        <span x-text="translations[currentLang].edit"></span>
+                    </sl-button>
+                </div>
+            </div>
+
+            <div x-show="emailSent" x-transition>
+                <div class="text-center py-8">
+                    <span class="iconify text-6xl text-green-600 mb-4" data-icon="mdi:check-circle"></span>
+                    <h3 class="text-2xl font-bold mb-4 text-gray-800" x-text="translations[currentLang].successTitle"></h3>
+                    <p class="text-gray-600 mb-6" x-text="translations[currentLang].successMessage"></p>
+                    <sl-button variant="primary" size="large" @click="window.location.href='/contact.html'">
+                        <span class="iconify mr-2" data-icon="mdi:arrow-left"></span>
+                        <span x-text="translations[currentLang].backToContact"></span>
+                    </sl-button>
+                </div>
+            </div>
+        </div>
+    </sl-card>
+</div>
+
+<script>
+    function mailForm() {
+        return {
+            currentLang: 'ja',
+            loading: false,
+            successMessage: '',
+            errorMessage: '',
+            showTerms: false,
+            termsAccepted: false,
+            emailSent: false,
+            formData: {
+                email: '',
+                subject: '',
+                message: ''
+            },
+            translations: {
+                ja: {
+                    title: 'その他のお問い合わせ',
+                    email: 'メールアドレス',
+                    emailPlaceholder: 'your@email.com',
+                    subject: '件名',
+                    subjectPlaceholder: '件名を入力してください',
+                    message: '内容',
+                    messagePlaceholder: 'お問い合わせ内容を入力してください',
+                    next: '次へ',
+                    termsTitle: '利用規約',
+                    termsContent: `
+                        <p class="mb-2 text-gray-800"><strong>個人情報の取り扱いについて</strong></p>
+                        <p class="mb-2 text-gray-800">ご入力いただいた個人情報は、お問い合わせへの回答のみに使用し、第三者への提供は行いません。</p>
+                        <p class="mb-2 text-gray-800"><strong>お問い合わせ内容について</strong></p>
+                        <p class="mb-2 text-gray-800">お問い合わせ内容によっては、回答にお時間をいただく場合がございます。また、内容によってはご回答できない場合もございますので、予めご了承ください。</p>
+                        <p class="mb-2 text-gray-800"><strong>メール送信について</strong></p>
+                        <p class="text-gray-800">お問い合わせ送信後、ご入力いただいたメールアドレス宛に確認メールが送信されます。</p>
+                    `,
+                    accept: '承諾',
+                    reject: '拒否',
+                    confirmMessage: '以下の内容で送信します。よろしければ「送信」ボタンを押してください。',
+                    send: '送信',
+                    edit: '編集',
+                    successTitle: '送信完了',
+                    successMessage: 'お問い合わせを送信しました。ご入力いただいたメールアドレス宛に確認メールを送信しました。',
+                    backToContact: 'お問い合わせトップへ',
+                    sendSuccess: 'お問い合わせを送信しました',
+                    sendError: '送信に失敗しました。もう一度お試しください。',
+                    fillAllFields: 'すべての項目を入力してください',
+                    acceptTermsFirst: '利用規約に承諾してください'
+                },
+                en: {
+                    title: 'Other Inquiry',
+                    email: 'Email Address',
+                    emailPlaceholder: 'your@email.com',
+                    subject: 'Subject',
+                    subjectPlaceholder: 'Enter subject',
+                    message: 'Message',
+                    messagePlaceholder: 'Enter your message',
+                    next: 'Next',
+                    termsTitle: 'Terms of Use',
+                    termsContent: `
+                        <p class="mb-2 text-gray-800"><strong>Privacy Policy</strong></p>
+                        <p class="mb-2 text-gray-800">Your personal information will only be used to respond to your inquiry and will not be shared with third parties.</p>
+                        <p class="mb-2 text-gray-800"><strong>Response Time</strong></p>
+                        <p class="mb-2 text-gray-800">Depending on the nature of your inquiry, it may take some time to respond. Please note that we may not be able to answer all inquiries.</p>
+                        <p class="mb-2 text-gray-800"><strong>Email Notification</strong></p>
+                        <p class="text-gray-800">After submitting your inquiry, a confirmation email will be sent to the email address you provided.</p>
+                    `,
+                    accept: 'Accept',
+                    reject: 'Reject',
+                    confirmMessage: 'Please review the information below and click "Send" if everything is correct.',
+                    send: 'Send',
+                    edit: 'Edit',
+                    successTitle: 'Sent Successfully',
+                    successMessage: 'Your inquiry has been sent. A confirmation email has been sent to your email address.',
+                    backToContact: 'Back to Contact',
+                    sendSuccess: 'Your inquiry has been sent',
+                    sendError: 'Failed to send. Please try again.',
+                    fillAllFields: 'Please fill in all fields',
+                    acceptTermsFirst: 'Please accept the terms of use'
+                }
+            },
+            
+            init() {
+                const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                this.currentLang = savedLang;
+                
+                if (typeof emailjs === 'undefined') {
+                    emailjs.init('T01AZMGjUWoJO_TM_');
+                }
+            },
+            
+            switchLanguage(lang) {
+                this.currentLang = lang;
+                localStorage.setItem('clinicNoteLang', lang);
+            },
+            
+            handleSubmit() {
+                if (!this.formData.email || !this.formData.subject || !this.formData.message) {
+                    this.errorMessage = this.translations[this.currentLang].fillAllFields;
+                    return;
+                }
+                this.showTerms = true;
+            },
+            
+            acceptTerms() {
+                this.termsAccepted = true;
+                this.showTerms = false;
+            },
+            
+            rejectTerms() {
+                this.showTerms = false;
+                this.errorMessage = this.currentLang === 'ja' 
+                    ? '利用規約を承諾する必要があります' 
+                    : 'You must accept the terms of use';
+            },
+            
+            editForm() {
+                this.termsAccepted = false;
+                this.showTerms = false;
+            },
+            
+            async sendEmail() {
+                this.loading = true;
+                this.successMessage = '';
+                this.errorMessage = '';
+
+                try {
+                    const templateParams = {
+                        to_email: 'contact.hirotoshiuchida@gmail.com',
+                        from_email: this.formData.email,
+                        reply_to: this.formData.email,
+                        subject: this.formData.subject,
+                        message: this.formData.message
+                    };
+
+                    console.log('Sending inquiry email with params:', templateParams);
+
+                    const response = await emailjs.send(
+                        'service_3ujie1g',
+                        'template_ve6y3im',
+                        templateParams
+                    );
+                    
+                    console.log('EmailJS inquiry response:', response);
+                    this.emailSent = true;
+                } catch (err) {
+                    console.error('Send inquiry email error:', err);
+                    this.errorMessage = this.translations[this.currentLang].sendError + ' (' + (err.text || err.message || 'Unknown error') + ')';
+                } finally {
+                    this.loading = false;
+                }
+            }
+        };
+    }
+</script>
