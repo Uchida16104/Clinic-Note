@@ -31,7 +31,7 @@ Clinic Note is a comprehensive medical appointment management system that allows
 - PostgreSQL (Render)
 - BASIC Authentication (JavaScript Pseudo)
 
-**Database (Render PostgreSQL)**
+**Database (Supabase PostgreSQL)**
 - User authentication data
 - Clinic records
 - Appointment schedules
@@ -41,6 +41,10 @@ Clinic Note is a comprehensive medical appointment management system that allows
 - Data processing service
 - Trend analysis
 - Health metrics
+
+**Contact (EmailJS)**
+- Provide BASIC Authentication credentials
+- Response other contacts
 
 ## Algorithm Flow
 
