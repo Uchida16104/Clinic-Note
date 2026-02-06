@@ -1,0 +1,150 @@
+<div x-data="basicAuthForm()" x-init="init()" class="max-w-2xl mx-auto" data-aos="fade-up">
+    <sl-card style="background-color: #ffffff !important;">
+        <div class="p-8">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-3xl font-bold text-gray-800" x-text="translations[currentLang].title"></h2>
+                <div class="flex gap-2">
+                    <sl-button-group label="Language">
+                        <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'" size="small">
+                            <span class="iconify" data-icon="twemoji:flag-japan"></span>
+                        </sl-button>
+                        <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'" size="small">
+                            <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                        </sl-button>
+                    </sl-button-group>
+                    <sl-button variant="default" size="small" @click="window.location.href='/contact.html'">
+                        <span class="iconify" data-icon="mdi:arrow-left"></span>
+                    </sl-button>
+                </div>
+            </div>
+
+            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''" class="mb-4">
+                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
+                <span x-text="successMessage"></span>
+            </sl-alert>
+
+            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''" class="mb-4">
+                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
+                <span x-text="errorMessage"></span>
+            </sl-alert>
+
+            <sl-alert variant="primary" open class="mb-6">
+                <span class="iconify slot-icon" data-icon="mdi:information"></span>
+                <span x-text="translations[currentLang].info"></span>
+            </sl-alert>
+
+            <form @submit.prevent="handleSubmit()" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].email"></label>
+                    <sl-input 
+                        type="email"
+                        x-model="formData.email"
+                        :placeholder="translations[currentLang].emailPlaceholder"
+                        size="large"
+                        required
+                        style="--sl-input-background-color: #ffffff; --sl-input-color: #1f2937;">
+                        <span slot="prefix" class="iconify" data-icon="mdi:email"></span>
+                    </sl-input>
+                </div>
+
+                <sl-button 
+                    type="submit" 
+                    variant="primary" 
+                    size="large" 
+                    class="w-full" 
+                    :loading="loading">
+                    <span class="iconify mr-2" data-icon="mdi:send"></span>
+                    <span x-text="translations[currentLang].send"></span>
+                </sl-button>
+            </form>
+        </div>
+    </sl-card>
+</div>
+
+<script>
+    function basicAuthForm() {
+        return {
+            currentLang: 'ja',
+            loading: false,
+            successMessage: '',
+            errorMessage: '',
+            formData: {
+                email: ''
+            },
+            translations: {
+                ja: {
+                    title: 'BASIC認証情報の取得',
+                    info: 'ご入力いただいたメールアドレス宛にBASIC認証のユーザー名とパスワードを送信します',
+                    email: 'メールアドレス',
+                    emailPlaceholder: 'your@email.com',
+                    send: '送信',
+                    sendSuccess: 'BASIC認証情報をメールで送信しました',
+                    sendError: '送信に失敗しました。もう一度お試しください。',
+                    emailRequired: 'メールアドレスを入力してください'
+                },
+                en: {
+                    title: 'Get BASIC Authentication',
+                    info: 'We will send BASIC authentication username and password to your email address',
+                    email: 'Email Address',
+                    emailPlaceholder: 'your@email.com',
+                    send: 'Send',
+                    sendSuccess: 'BASIC authentication info sent to your email',
+                    sendError: 'Failed to send. Please try again.',
+                    emailRequired: 'Please enter email address'
+                }
+            },
+            
+            init() {
+                const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                this.currentLang = savedLang;
+                
+                if (typeof emailjs === 'undefined') {
+                    emailjs.init('T01AZMGjUWoJO_TM_');
+                }
+            },
+            
+            switchLanguage(lang) {
+                this.currentLang = lang;
+                localStorage.setItem('clinicNoteLang', lang);
+            },
+            
+            async handleSubmit() {
+                this.loading = true;
+                this.successMessage = '';
+                this.errorMessage = '';
+
+                try {
+                    if (!this.formData.email || !this.formData.email.includes('@')) {
+                        this.errorMessage = this.translations[this.currentLang].emailRequired;
+                        this.loading = false;
+                        return;
+                    }
+
+                    const templateParams = {
+                        to_email: this.formData.email,
+                        user_email: this.formData.email,
+                        username: 'admin',
+                        password: 'ClinicNote'
+                    };
+
+                    console.log('Sending BASIC auth email with params:', templateParams);
+
+                    const response = await emailjs.send(
+                        'service_m58rach',
+                        'template_sf7sv9p',
+                        templateParams
+                    );
+                    
+                    console.log('EmailJS BASIC Auth response:', response);
+                    this.successMessage = this.translations[this.currentLang].sendSuccess;
+                    this.formData.email = '';
+                } catch (err) {
+                    console.error('Send BASIC auth email error:', err);
+                    this.errorMessage = this.translations[this.currentLang].sendError + ' (' + (err.text || err.message || 'Unknown error') + ')';
+                } finally {
+                    this.loading = false;
+                }
+            }
+        };
+    }
+</script>
