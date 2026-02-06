@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
         sl-card {
             background-color: #ffffff !important;
@@ -25,15 +24,16 @@
         }
         .contact-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
         }
         .contact-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
-    <div x-data="contactSelector()" x-init="init()" class="container mx-auto px-4 py-8">
+    <div x-data="contactSelectData()" x-init="init()" class="container mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
                 <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
@@ -54,29 +54,21 @@
             </div>
         </div>
 
-        <div id="contact-container">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto" data-aos="fade-up">
-                <sl-card class="contact-card cursor-pointer" 
-                    hx-get="basic.html" 
-                    hx-target="#contact-container" 
-                    hx-swap="innerHTML"
-                    hx-vals='{"lang": "ja"}'>
-                    <div class="text-center p-8">
-                        <span class="iconify text-6xl text-indigo-600 mb-4" data-icon="mdi:shield-key"></span>
+        <div id="content-area">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+                <sl-card class="contact-card" @click="navigateTo('basic')" data-aos="fade-up">
+                    <div class="text-center p-8" style="background-color: #ffffff !important;">
+                        <span class="iconify text-7xl mb-6" data-icon="mdi:shield-key" style="color: #3b82f6;"></span>
                         <h2 class="text-2xl font-bold mb-4 text-gray-800" x-text="translations[currentLang].basicAuth"></h2>
                         <p class="text-gray-600" x-text="translations[currentLang].basicAuthDesc"></p>
                     </div>
                 </sl-card>
 
-                <sl-card class="contact-card cursor-pointer" 
-                    hx-get="mail.html" 
-                    hx-target="#contact-container" 
-                    hx-swap="innerHTML"
-                    hx-vals='{"lang": "ja"}'>
-                    <div class="text-center p-8">
-                        <span class="iconify text-6xl text-green-600 mb-4" data-icon="mdi:email"></span>
-                        <h2 class="text-2xl font-bold mb-4 text-gray-800" x-text="translations[currentLang].other"></h2>
-                        <p class="text-gray-600" x-text="translations[currentLang].otherDesc"></p>
+                <sl-card class="contact-card" @click="navigateTo('mail')" data-aos="fade-up" data-aos-delay="200">
+                    <div class="text-center p-8" style="background-color: #ffffff !important;">
+                        <span class="iconify text-7xl mb-6" data-icon="mdi:email-edit" style="color: #10b981;"></span>
+                        <h2 class="text-2xl font-bold mb-4 text-gray-800" x-text="translations[currentLang].otherInquiry"></h2>
+                        <p class="text-gray-600" x-text="translations[currentLang].otherInquiryDesc"></p>
                     </div>
                 </sl-card>
             </div>
@@ -84,7 +76,7 @@
     </div>
 
     <script>
-        function contactSelector() {
+        function contactSelectData() {
             return {
                 currentLang: 'ja',
                 translations: {
@@ -92,32 +84,34 @@
                         title: 'お問い合わせ',
                         subtitle: 'お問い合わせ種別を選択してください',
                         basicAuth: 'BASIC認証情報の取得',
-                        basicAuthDesc: 'BASIC認証のユーザー名とパスワードを取得します',
-                        other: 'その他のお問い合わせ',
-                        otherDesc: 'ご質問やご要望をお送りください'
+                        basicAuthDesc: 'システムへのアクセスに必要なBASIC認証情報をメールで受け取ります',
+                        otherInquiry: 'その他のお問い合わせ',
+                        otherInquiryDesc: 'サービスに関するご質問やご要望をお送りください'
                     },
                     en: {
-                        title: 'Contact',
+                        title: 'Contact Us',
                         subtitle: 'Please select inquiry type',
                         basicAuth: 'Get BASIC Authentication',
-                        basicAuthDesc: 'Get BASIC authentication username and password',
-                        other: 'Other Inquiry',
-                        otherDesc: 'Send us your questions or requests'
+                        basicAuthDesc: 'Receive BASIC authentication credentials via email',
+                        otherInquiry: 'Other Inquiries',
+                        otherInquiryDesc: 'Send us your questions or requests about our service'
                     }
                 },
+
                 init() {
                     const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
                     this.currentLang = savedLang;
                     AOS.init({ duration: 1000, once: true });
-                    emailjs.init('T01AZMGjUWoJO_TM_');
-                    
-                    document.body.addEventListener('htmx:configRequest', (event) => {
-                        event.detail.parameters.lang = this.currentLang;
-                    });
                 },
+
                 switchLanguage(lang) {
                     this.currentLang = lang;
                     localStorage.setItem('clinicNoteLang', lang);
+                },
+
+                navigateTo(page) {
+                    const lang = this.currentLang;
+                    window.location.href = `/${page}.html?lang=${lang}`;
                 }
             };
         }
