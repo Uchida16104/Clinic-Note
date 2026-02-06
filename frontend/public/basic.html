@@ -1,37 +1,74 @@
-<div x-data="basicAuthForm()" x-init="init()" class="max-w-2xl mx-auto" data-aos="fade-up">
-    <sl-card style="background-color: #ffffff !important;">
-        <div class="p-8">
-            <div class="flex items-center justify-between mb-6">
-                <h2 class="text-3xl font-bold text-gray-800" x-text="translations[currentLang].title"></h2>
-                <div class="flex gap-2">
-                    <sl-button-group label="Language">
-                        <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'" size="small">
-                            <span class="iconify" data-icon="twemoji:flag-japan"></span>
-                        </sl-button>
-                        <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'" size="small">
-                            <span class="iconify" data-icon="twemoji:flag-united-states"></span>
-                        </sl-button>
-                    </sl-button-group>
-                    <sl-button variant="default" size="small" @click="window.location.href='/contact.html'">
-                        <span class="iconify" data-icon="mdi:arrow-left"></span>
-                    </sl-button>
-                </div>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinic Note - BASIC認証情報取得</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
+    <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <style>
+        sl-input::part(base), sl-textarea::part(base) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-input::part(input), sl-textarea::part(textarea) {
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+        }
+        sl-card {
+            background-color: #ffffff !important;
+        }
+        h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
+            color: #1f2937 !important;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div x-data="basicAuthData()" x-init="init()" class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8" data-aos="fade-down">
+            <div>
+                <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
+                <p class="mt-2 text-gray-700" x-text="translations[currentLang].subtitle"></p>
             </div>
+            <div class="flex gap-2">
+                <sl-button-group label="Language">
+                    <sl-button @click="switchLanguage('ja')" :variant="currentLang === 'ja' ? 'primary' : 'default'">
+                        <span class="iconify" data-icon="twemoji:flag-japan"></span>
+                    </sl-button>
+                    <sl-button @click="switchLanguage('en')" :variant="currentLang === 'en' ? 'primary' : 'default'">
+                        <span class="iconify" data-icon="twemoji:flag-united-states"></span>
+                    </sl-button>
+                </sl-button-group>
+                <sl-button variant="default" @click="window.location.href='/contact.html'">
+                    <span class="iconify" data-icon="mdi:arrow-left"></span>
+                </sl-button>
+            </div>
+        </div>
 
-            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''" class="mb-4">
+        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-2xl mx-auto" data-aos="fade-up" style="background-color: #ffffff !important;">
+            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''">
                 <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
                 <span x-text="successMessage"></span>
             </sl-alert>
 
-            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''" class="mb-4">
+            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''">
                 <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
                 <span x-text="errorMessage"></span>
             </sl-alert>
 
-            <sl-alert variant="primary" open class="mb-6">
-                <span class="iconify slot-icon" data-icon="mdi:information"></span>
-                <span x-text="translations[currentLang].info"></span>
-            </sl-alert>
+            <div class="mb-6">
+                <sl-alert variant="primary" open>
+                    <span class="iconify slot-icon" data-icon="mdi:information"></span>
+                    <span x-text="translations[currentLang].infoMessage"></span>
+                </sl-alert>
+            </div>
 
             <form @submit.prevent="handleSubmit()" class="space-y-6">
                 <div>
@@ -41,10 +78,10 @@
                         x-model="formData.email"
                         :placeholder="translations[currentLang].emailPlaceholder"
                         size="large"
-                        required
-                        style="--sl-input-background-color: #ffffff; --sl-input-color: #1f2937;">
+                        required>
                         <span slot="prefix" class="iconify" data-icon="mdi:email"></span>
                     </sl-input>
+                    <small class="text-gray-500" x-text="translations[currentLang].emailHint"></small>
                 </div>
 
                 <sl-button 
@@ -58,93 +95,105 @@
                 </sl-button>
             </form>
         </div>
-    </sl-card>
-</div>
+    </div>
 
-<script>
-    function basicAuthForm() {
-        return {
-            currentLang: 'ja',
-            loading: false,
-            successMessage: '',
-            errorMessage: '',
-            formData: {
-                email: ''
-            },
-            translations: {
-                ja: {
-                    title: 'BASIC認証情報の取得',
-                    info: 'ご入力いただいたメールアドレス宛にBASIC認証のユーザー名とパスワードを送信します',
-                    email: 'メールアドレス',
-                    emailPlaceholder: 'your@email.com',
-                    send: '送信',
-                    sendSuccess: 'BASIC認証情報をメールで送信しました',
-                    sendError: '送信に失敗しました。もう一度お試しください。',
-                    emailRequired: 'メールアドレスを入力してください'
+    <script>
+        function basicAuthData() {
+            return {
+                currentLang: 'ja',
+                loading: false,
+                successMessage: '',
+                errorMessage: '',
+                formData: {
+                    email: ''
                 },
-                en: {
-                    title: 'Get BASIC Authentication',
-                    info: 'We will send BASIC authentication username and password to your email address',
-                    email: 'Email Address',
-                    emailPlaceholder: 'your@email.com',
-                    send: 'Send',
-                    sendSuccess: 'BASIC authentication info sent to your email',
-                    sendError: 'Failed to send. Please try again.',
-                    emailRequired: 'Please enter email address'
-                }
-            },
-            
-            init() {
-                const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
-                this.currentLang = savedLang;
-                
-                if (typeof emailjs === 'undefined') {
-                    emailjs.init('T01AZMGjUWoJO_TM_');
-                }
-            },
-            
-            switchLanguage(lang) {
-                this.currentLang = lang;
-                localStorage.setItem('clinicNoteLang', lang);
-            },
-            
-            async handleSubmit() {
-                this.loading = true;
-                this.successMessage = '';
-                this.errorMessage = '';
+                translations: {
+                    ja: {
+                        title: 'BASIC認証情報取得',
+                        subtitle: 'システムアクセスに必要な認証情報をメールで受け取ります',
+                        infoMessage: 'ご入力いただいたメールアドレス宛に、BASIC認証のユーザー名とパスワードをお送りします。',
+                        email: 'メールアドレス',
+                        emailPlaceholder: 'your@email.com',
+                        emailHint: '認証情報を受け取るメールアドレスを入力してください',
+                        send: '送信',
+                        sendSuccess: '認証情報をメールで送信しました。メールボックスをご確認ください。',
+                        sendError: '送信に失敗しました。もう一度お試しください。',
+                        invalidEmail: '有効なメールアドレスを入力してください'
+                    },
+                    en: {
+                        title: 'Get BASIC Authentication',
+                        subtitle: 'Receive authentication credentials via email',
+                        infoMessage: 'We will send your BASIC authentication username and password to the email address you provide.',
+                        email: 'Email Address',
+                        emailPlaceholder: 'your@email.com',
+                        emailHint: 'Enter your email address to receive authentication credentials',
+                        send: 'Send',
+                        sendSuccess: 'Authentication credentials have been sent to your email. Please check your inbox.',
+                        sendError: 'Failed to send. Please try again.',
+                        invalidEmail: 'Please enter a valid email address'
+                    }
+                },
 
-                try {
+                init() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const lang = urlParams.get('lang');
+                    if (lang && (lang === 'ja' || lang === 'en')) {
+                        this.currentLang = lang;
+                        localStorage.setItem('clinicNoteLang', lang);
+                    } else {
+                        const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
+                        this.currentLang = savedLang;
+                    }
+                    
+                    AOS.init({ duration: 1000, once: true });
+                    emailjs.init('T01AZMGjUWoJO_TM_');
+                },
+
+                switchLanguage(lang) {
+                    this.currentLang = lang;
+                    localStorage.setItem('clinicNoteLang', lang);
+                },
+
+                async handleSubmit() {
+                    this.loading = true;
+                    this.successMessage = '';
+                    this.errorMessage = '';
+
                     if (!this.formData.email || !this.formData.email.includes('@')) {
-                        this.errorMessage = this.translations[this.currentLang].emailRequired;
+                        this.errorMessage = this.translations[this.currentLang].invalidEmail;
                         this.loading = false;
                         return;
                     }
 
-                    const templateParams = {
-                        to_email: this.formData.email,
-                        user_email: this.formData.email,
-                        username: 'admin',
-                        password: 'ClinicNote'
-                    };
+                    try {
+                        const templateParams = {
+                            to_email: this.formData.email,
+                            user_email: this.formData.email,
+                            username: 'admin',
+                            password: 'ClinicNote'
+                        };
 
-                    console.log('Sending BASIC auth email with params:', templateParams);
+                        const response = await emailjs.send(
+                            'service_m58rach',
+                            'template_sf7sv9p',
+                            templateParams
+                        );
 
-                    const response = await emailjs.send(
-                        'service_m58rach',
-                        'template_sf7sv9p',
-                        templateParams
-                    );
-                    
-                    console.log('EmailJS BASIC Auth response:', response);
-                    this.successMessage = this.translations[this.currentLang].sendSuccess;
-                    this.formData.email = '';
-                } catch (err) {
-                    console.error('Send BASIC auth email error:', err);
-                    this.errorMessage = this.translations[this.currentLang].sendError + ' (' + (err.text || err.message || 'Unknown error') + ')';
-                } finally {
-                    this.loading = false;
+                        if (response.status === 200) {
+                            this.successMessage = this.translations[this.currentLang].sendSuccess;
+                            this.formData.email = '';
+                        } else {
+                            this.errorMessage = this.translations[this.currentLang].sendError;
+                        }
+                    } catch (err) {
+                        console.error('EmailJS error:', err);
+                        this.errorMessage = this.translations[this.currentLang].sendError;
+                    } finally {
+                        this.loading = false;
+                    }
                 }
-            }
-        };
-    }
-</script>
+            };
+        }
+    </script>
+</body>
+</html>
