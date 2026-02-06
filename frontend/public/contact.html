@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clinic Note - お問い合わせ</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
     <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
@@ -13,33 +14,26 @@
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
-        sl-input::part(base), sl-textarea::part(base), sl-select::part(combobox) {
-            background-color: #ffffff !important;
-            color: #1f2937 !important;
-        }
-        sl-input::part(input), sl-textarea::part(textarea), sl-select::part(display-input) {
-            background-color: #ffffff !important;
-            color: #1f2937 !important;
-        }
         sl-card {
+            background-color: #ffffff !important;
+        }
+        sl-card::part(base) {
             background-color: #ffffff !important;
         }
         h1, h2, h3, h4, h5, h6, p, span, div, label, strong {
             color: #1f2937 !important;
         }
-        .consent-box {
-            max-height: 200px;
-            overflow-y: auto;
-            padding: 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            background-color: #f9fafb;
-            margin-bottom: 1rem;
+        .contact-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .contact-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
-    <div x-data="contactData()" x-init="init()" class="container mx-auto px-4 py-8">
+    <div x-data="contactSelector()" x-init="init()" class="container mx-auto px-4 py-8">
         <div class="flex justify-between items-center mb-8" data-aos="fade-down">
             <div>
                 <h1 class="text-4xl font-bold text-gray-800" x-text="translations[currentLang].title"></h1>
@@ -60,310 +54,70 @@
             </div>
         </div>
 
-        <div class="bg-white rounded-2xl shadow-xl p-8 max-w-2xl mx-auto" data-aos="fade-up">
-            <sl-alert x-show="successMessage" variant="success" :open="successMessage !== ''" closable @sl-after-hide="successMessage = ''">
-                <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
-                <span x-text="successMessage"></span>
-            </sl-alert>
-
-            <sl-alert x-show="errorMessage" variant="danger" :open="errorMessage !== ''" closable @sl-after-hide="errorMessage = ''">
-                <span class="iconify slot-icon" data-icon="mdi:alert-circle"></span>
-                <span x-text="errorMessage"></span>
-            </sl-alert>
-
-            <form @submit.prevent="handleSubmit()" class="space-y-6">
-                <div>
-                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].inquiryType"></label>
-                    <sl-select 
-                        x-model="formData.inquiryType"
-                        @sl-change="onInquiryTypeChange()"
-                        size="large"
-                        required>
-                        <sl-option value="basic_auth" x-text="translations[currentLang].basicAuth"></sl-option>
-                    </sl-select>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].email"></label>
-                    <sl-input 
-                        type="email"
-                        x-model="formData.email"
-                        :placeholder="translations[currentLang].emailPlaceholder"
-                        size="large"
-                        required>
-                        <span slot="prefix" class="iconify" data-icon="mdi:email"></span>
-                    </sl-input>
-                </div>
-
-                <div x-show="formData.inquiryType === 'other'" x-transition>
-                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].subject"></label>
-                    <sl-input 
-                        x-model="formData.subject"
-                        :placeholder="translations[currentLang].subjectPlaceholder"
-                        size="large"
-                        :required="formData.inquiryType === 'other'">
-                    </sl-input>
-                </div>
-
-                <div x-show="formData.inquiryType === 'other'" x-transition>
-                    <label class="block text-sm font-medium mb-2 text-gray-800" x-text="translations[currentLang].message"></label>
-                    <sl-textarea 
-                        x-model="formData.message"
-                        :placeholder="translations[currentLang].messagePlaceholder"
-                        rows="6"
-                        resize="auto"
-                        :required="formData.inquiryType === 'other'">
-                    </sl-textarea>
-                </div>
-
-                <div x-show="formData.inquiryType === 'other'" x-transition>
-                    <h3 class="text-lg font-bold mb-2 text-gray-800" x-text="translations[currentLang].termsTitle"></h3>
-                    <div class="consent-box">
-                        <div x-html="translations[currentLang].termsContent"></div>
+        <div id="contact-container">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto" data-aos="fade-up">
+                <sl-card class="contact-card cursor-pointer" 
+                    hx-get="basic.html" 
+                    hx-target="#contact-container" 
+                    hx-swap="innerHTML"
+                    hx-vals='{"lang": "ja"}'>
+                    <div class="text-center p-8">
+                        <span class="iconify text-6xl text-indigo-600 mb-4" data-icon="mdi:shield-key"></span>
+                        <h2 class="text-2xl font-bold mb-4 text-gray-800" x-text="translations[currentLang].basicAuth"></h2>
+                        <p class="text-gray-600" x-text="translations[currentLang].basicAuthDesc"></p>
                     </div>
-                    
-                    <div class="flex gap-4 mb-4">
-                        <sl-button 
-                            type="button"
-                            variant="success" 
-                            size="medium"
-                            @click="acceptTerms()"
-                            :disabled="hasAccepted">
-                            <span class="iconify mr-2" data-icon="mdi:check-circle"></span>
-                            <span x-text="translations[currentLang].accept"></span>
-                        </sl-button>
-                        <sl-button 
-                            type="button"
-                            variant="danger" 
-                            size="medium"
-                            @click="rejectTerms()">
-                            <span class="iconify mr-2" data-icon="mdi:close-circle"></span>
-                            <span x-text="translations[currentLang].reject"></span>
-                        </sl-button>
+                </sl-card>
+
+                <sl-card class="contact-card cursor-pointer" 
+                    hx-get="mail.html" 
+                    hx-target="#contact-container" 
+                    hx-swap="innerHTML"
+                    hx-vals='{"lang": "ja"}'>
+                    <div class="text-center p-8">
+                        <span class="iconify text-6xl text-green-600 mb-4" data-icon="mdi:email"></span>
+                        <h2 class="text-2xl font-bold mb-4 text-gray-800" x-text="translations[currentLang].other"></h2>
+                        <p class="text-gray-600" x-text="translations[currentLang].otherDesc"></p>
                     </div>
-
-                    <sl-alert x-show="hasAccepted" variant="success" open>
-                        <span class="iconify slot-icon" data-icon="mdi:check-circle"></span>
-                        <span x-text="translations[currentLang].termsAccepted"></span>
-                    </sl-alert>
-                </div>
-
-                <sl-button 
-                    type="submit" 
-                    variant="primary" 
-                    size="large" 
-                    class="w-full" 
-                    :loading="loading"
-                    :disabled="formData.inquiryType === 'other' && !hasAccepted">
-                    <span class="iconify mr-2" data-icon="mdi:send"></span>
-                    <span x-text="translations[currentLang].send"></span>
-                </sl-button>
-            </form>
+                </sl-card>
+            </div>
         </div>
     </div>
 
     <script>
-        function contactData() {
+        function contactSelector() {
             return {
                 currentLang: 'ja',
-                loading: false,
-                successMessage: '',
-                errorMessage: '',
-                hasAccepted: false,
-                formData: {
-                    inquiryType: 'basic_auth',
-                    email: '',
-                    subject: '',
-                    message: ''
-                },
                 translations: {
                     ja: {
                         title: 'お問い合わせ',
-                        subtitle: 'ご質問やご要望をお送りください',
-                        inquiryType: 'お問い合わせ種別',
+                        subtitle: 'お問い合わせ種別を選択してください',
                         basicAuth: 'BASIC認証情報の取得',
+                        basicAuthDesc: 'BASIC認証のユーザー名とパスワードを取得します',
                         other: 'その他のお問い合わせ',
-                        email: 'メールアドレス',
-                        emailPlaceholder: 'your@email.com',
-                        subject: '件名',
-                        subjectPlaceholder: '件名を入力してください',
-                        message: '内容',
-                        messagePlaceholder: 'お問い合わせ内容を入力してください',
-                        termsTitle: '利用規約',
-                        termsContent: `
-                            <p class="mb-2"><strong>個人情報の取り扱いについて</strong></p>
-                            <p class="mb-2">ご入力いただいた個人情報は、お問い合わせへの回答のみに使用し、第三者への提供は行いません。</p>
-                            <p class="mb-2"><strong>お問い合わせ内容について</strong></p>
-                            <p class="mb-2">お問い合わせ内容によっては、回答にお時間をいただく場合がございます。また、内容によってはご回答できない場合もございますので、予めご了承ください。</p>
-                            <p class="mb-2"><strong>メール送信について</strong></p>
-                            <p>お問い合わせ送信後、ご入力いただいたメールアドレス宛に確認メールが送信されます。</p>
-                        `,
-                        accept: '承諾',
-                        reject: '拒否',
-                        termsAccepted: '利用規約に承諾しました。送信ボタンを押してください。',
-                        send: '送信',
-                        sendSuccess: 'お問い合わせを送信しました',
-                        sendError: '送信に失敗しました。もう一度お試しください。',
-                        fillAllFields: 'すべての項目を入力してください',
-                        acceptTermsFirst: '利用規約に承諾してください'
+                        otherDesc: 'ご質問やご要望をお送りください'
                     },
                     en: {
                         title: 'Contact',
-                        subtitle: 'Send us your questions or requests',
-                        inquiryType: 'Inquiry Type',
+                        subtitle: 'Please select inquiry type',
                         basicAuth: 'Get BASIC Authentication',
+                        basicAuthDesc: 'Get BASIC authentication username and password',
                         other: 'Other Inquiry',
-                        email: 'Email Address',
-                        emailPlaceholder: 'your@email.com',
-                        subject: 'Subject',
-                        subjectPlaceholder: 'Enter subject',
-                        message: 'Message',
-                        messagePlaceholder: 'Enter your message',
-                        termsTitle: 'Terms of Use',
-                        termsContent: `
-                            <p class="mb-2"><strong>Privacy Policy</strong></p>
-                            <p class="mb-2">Your personal information will only be used to respond to your inquiry and will not be shared with third parties.</p>
-                            <p class="mb-2"><strong>Response Time</strong></p>
-                            <p class="mb-2">Depending on the nature of your inquiry, it may take some time to respond. Please note that we may not be able to answer all inquiries.</p>
-                            <p class="mb-2"><strong>Email Notification</strong></p>
-                            <p>After submitting your inquiry, a confirmation email will be sent to the email address you provided.</p>
-                        `,
-                        accept: 'Accept',
-                        reject: 'Reject',
-                        termsAccepted: 'You have accepted the terms. Please click the send button.',
-                        send: 'Send',
-                        sendSuccess: 'Your inquiry has been sent',
-                        sendError: 'Failed to send. Please try again.',
-                        fillAllFields: 'Please fill in all fields',
-                        acceptTermsFirst: 'Please accept the terms of use'
+                        otherDesc: 'Send us your questions or requests'
                     }
                 },
-
                 init() {
                     const savedLang = localStorage.getItem('clinicNoteLang') || 'ja';
                     this.currentLang = savedLang;
                     AOS.init({ duration: 1000, once: true });
                     emailjs.init('T01AZMGjUWoJO_TM_');
-                    console.log('EmailJS initialized successfully');
+                    
+                    document.body.addEventListener('htmx:configRequest', (event) => {
+                        event.detail.parameters.lang = this.currentLang;
+                    });
                 },
-
                 switchLanguage(lang) {
                     this.currentLang = lang;
                     localStorage.setItem('clinicNoteLang', lang);
-                },
-
-                onInquiryTypeChange() {
-                    this.hasAccepted = false;
-                    if (this.formData.inquiryType === 'basic_auth') {
-                        this.formData.subject = '';
-                        this.formData.message = '';
-                    }
-                },
-
-                acceptTerms() {
-                    this.hasAccepted = true;
-                    console.log('Terms accepted');
-                },
-
-                rejectTerms() {
-                    this.hasAccepted = false;
-                    this.formData.subject = '';
-                    this.formData.message = '';
-                    this.errorMessage = this.currentLang === 'ja' 
-                        ? '利用規約を承諾する必要があります' 
-                        : 'You must accept the terms of use';
-                },
-
-                async handleSubmit() {
-                    this.loading = true;
-                    this.successMessage = '';
-                    this.errorMessage = '';
-
-                    try {
-                        if (!this.formData.email || !this.formData.email.includes('@')) {
-                            this.errorMessage = this.currentLang === 'ja' 
-                                ? '有効なメールアドレスを入力してください' 
-                                : 'Please enter a valid email address';
-                            this.loading = false;
-                            return;
-                        }
-
-                        if (this.formData.inquiryType === 'basic_auth') {
-                            await this.sendBasicAuthEmail();
-                        } else if (this.formData.inquiryType === 'other') {
-                            if (!this.hasAccepted) {
-                                this.errorMessage = this.translations[this.currentLang].acceptTermsFirst;
-                                this.loading = false;
-                                return;
-                            }
-
-                            if (!this.formData.subject || !this.formData.message) {
-                                this.errorMessage = this.translations[this.currentLang].fillAllFields;
-                                this.loading = false;
-                                return;
-                            }
-
-                            await this.sendOtherInquiryEmail();
-                        }
-                    } catch (err) {
-                        console.error('Submit error:', err);
-                        this.errorMessage = this.translations[this.currentLang].sendError + ' (' + (err.text || err.message || 'Unknown error') + ')';
-                    } finally {
-                        this.loading = false;
-                    }
-                },
-
-                async sendBasicAuthEmail() {
-                    console.log('Sending BASIC auth email to:', this.formData.email);
-                    
-                    const templateParams = {
-                        to_email: this.formData.email,
-                        user_email: this.formData.email,
-                        username: 'admin',
-                        password: 'ClinicNote'
-                    };
-
-                    console.log('Template params:', templateParams);
-
-                    const response = await emailjs.send(
-                        'service_m58rach',
-                        'template_sf7sv9p',
-                        templateParams
-                    );
-                    
-                    console.log('EmailJS BASIC Auth response:', response);
-                    this.successMessage = this.translations[this.currentLang].sendSuccess;
-                    this.formData.email = '';
-                },
-
-                async sendOtherInquiryEmail() {
-                    console.log('Sending other inquiry email from:', this.formData.email);
-                    
-                    const templateParams = {
-                        to_email: 'contact.hirotoshiuchida@gmail.com',
-                        from_email: this.formData.email,
-                        reply_to: this.formData.email,
-                        subject: this.formData.subject,
-                        message: this.formData.message
-                    };
-
-                    console.log('Template params:', templateParams);
-
-                    const response = await emailjs.send(
-                        'service_3ujie1g',
-                        'template_ve6y3im',
-                        templateParams
-                    );
-                    
-                    console.log('EmailJS inquiry response:', response);
-                    this.successMessage = this.translations[this.currentLang].sendSuccess;
-                    this.formData = {
-                        inquiryType: 'basic_auth',
-                        email: '',
-                        subject: '',
-                        message: ''
-                    };
-                    this.hasAccepted = false;
                 }
             };
         }
