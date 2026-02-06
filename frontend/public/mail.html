@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Clinic Note - お問い合わせフォーム</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer src="https://unpkg.com/alpinejs@3.13.5/dist/cdn.min.js"></script>
-    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.4/dist/aos.css" rel="stylesheet" />
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/themes/light.css"/>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.12.0/cdn/shoelace-autoloader.js"></script>
     <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
         sl-input::part(base), sl-textarea::part(base) {
             background-color: #ffffff !important;
@@ -150,7 +149,7 @@
                         <div class="consent-box">
                             <div x-html="translations[currentLang].termsContent"></div>
                         </div>
-
+                        
                         <div class="flex gap-4 mb-4">
                             <sl-button 
                                 type="button"
@@ -260,6 +259,12 @@
                     subject: '',
                     message: ''
                 },
+                config: {
+                    publicKey: '',
+                    serviceId: 'service_3ujie1g',
+                    templateId: 'template_ve6y3im',
+                    toEmail: 'contact.hirotoshiuchida@gmail.com'
+                },
                 translations: {
                     ja: {
                         title: 'お問い合わせフォーム',
@@ -295,8 +300,7 @@
                         fillAllFields: 'すべての項目を入力してください',
                         acceptTermsFirst: '利用規約に承諾してください',
                         sendError: '送信に失敗しました。もう一度お試しください。',
-                        invalidEmail: '有効なメールアドレスを入力してください',
-                        recipientEmptyHint: 'メール送信サービスの設定で受信先が正しく設定されていません。管理画面でテンプレートの「To」欄を確認してください。'
+                        invalidEmail: '有効なメールアドレスを入力してください'
                     },
                     en: {
                         title: 'Contact Form',
@@ -332,8 +336,7 @@
                         fillAllFields: 'Please fill in all fields',
                         acceptTermsFirst: 'Please accept the terms of use',
                         sendError: 'Failed to send. Please try again.',
-                        invalidEmail: 'Please enter a valid email address',
-                        recipientEmptyHint: 'Recipient is not configured correctly in the email template. Please check the template "To" field in the dashboard.'
+                        invalidEmail: 'Please enter a valid email address'
                     }
                 },
 
@@ -348,8 +351,6 @@
                         this.currentLang = savedLang;
                     }
                     AOS.init({ duration: 1000, once: true });
-                    const EMAILJS_USER_ID = 'T01AZMGjUWoJO_TM_';
-                    emailjs.init(EMAILJS_USER_ID);
                 },
 
                 switchLanguage(lang) {
@@ -359,6 +360,7 @@
 
                 acceptTerms() {
                     this.hasAccepted = true;
+                    this.errorMessage = '';
                 },
 
                 rejectTerms() {
@@ -366,12 +368,18 @@
                     this.errorMessage = this.translations[this.currentLang].acceptTermsFirst;
                 },
 
+                isValidEmail(email) {
+                    if (!email) return false;
+                    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    return re.test(email.trim());
+                },
+
                 proceedToConfirm() {
-                    const email = String(this.formData.email || '').trim();
-                    const subject = String(this.formData.subject || '').trim();
-                    const message = String(this.formData.message || '').trim();
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!email || !emailRegex.test(email)) {
+                    this.errorMessage = '';
+                    const email = (this.formData.email || '').trim();
+                    const subject = (this.formData.subject || '').trim();
+                    const message = (this.formData.message || '').trim();
+                    if (!this.isValidEmail(email)) {
                         this.errorMessage = this.translations[this.currentLang].invalidEmail;
                         return;
                     }
@@ -383,7 +391,6 @@
                         this.errorMessage = this.translations[this.currentLang].acceptTermsFirst;
                         return;
                     }
-                    this.errorMessage = '';
                     this.formData.email = email;
                     this.formData.subject = subject;
                     this.formData.message = message;
@@ -391,48 +398,75 @@
                 },
 
                 async handleSubmit() {
-                    this.loading = true;
                     this.errorMessage = '';
-                    const RECEIVER_EMAIL = 'contact.hirotoshiuchida@gmail.com';
-                    const SERVICE_ID = 'service_3ujie1g';
-                    const TEMPLATE_ID = 'template_ve6y3im';
-                    const EMAILJS_USER_ID = 'T01AZMGjUWoJO_TM_';
-                    const templateParams = {
-                        to_email: RECEIVER_EMAIL,
-                        to_name: 'Clinic Note',
-                        from_email: String(this.formData.email).trim(),
-                        reply_to: String(this.formData.email).trim(),
-                        subject: String(this.formData.subject).trim(),
-                        message: String(this.formData.message).trim()
+                    if (this.loading) return;
+                    this.loading = true;
+                    const payload = {
+                        service_id: this.config.serviceId,
+                        template_id: this.config.templateId,
+                        user_id: this.config.publicKey,
+                        template_params: {
+                            to_email: this.config.toEmail,
+                            from_email: this.formData.email,
+                            reply_to: this.formData.email,
+                            subject: this.formData.subject,
+                            message: this.formData.message
+                        }
                     };
                     try {
-                        const response = await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, EMAILJS_USER_ID);
-                        if (response && response.status === 200) {
-                            this.currentStep = 3;
+                        if (this.config.publicKey && this.config.publicKey.trim() !== '') {
+                            const res = await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+                            if (res.ok) {
+                                this.currentStep = 3;
+                                this.loading = false;
+                                return;
+                            } else {
+                                let text = await res.text();
+                                try {
+                                    const json = JSON.parse(text);
+                                    if (json && json.text) text = json.text;
+                                } catch (e) {}
+                                if (res.status === 422 && text && text.toLowerCase().includes('recipients')) {
+                                    this.errorMessage = '送信に失敗しました。メールテンプレートの受信先(To)が設定されていないか空になっています。EmailJSダッシュボードのテンプレートの「To」欄を確認してください。';
+                                } else if (res.status === 400 && text && text.toLowerCase().includes('public')) {
+                                    this.errorMessage = '送信に失敗しました。EmailJSのPublic Keyが無効です。ダッシュボードのAccountページでPublic Keyを確認し、config.publicKeyに正しい値を設定してください。';
+                                } else {
+                                    this.errorMessage = this.translations[this.currentLang].sendError + ' (' + (text || ('status ' + res.status)) + ')';
+                                }
+                                this.loading = false;
+                                return;
+                            }
                         } else {
-                            this.errorMessage = this.translations[this.currentLang].sendError;
-                        }
-                    } catch (err) {
-                        const status = err && err.status ? err.status : null;
-                        const text = err && err.text ? err.text : '';
-                        if (status === 422 && /recipients|recipient/i.test(String(text))) {
-                            this.errorMessage = this.translations[this.currentLang].recipientEmptyHint;
-                            const mailtoSubject = encodeURIComponent(this.formData.subject);
-                            const mailtoBody = encodeURIComponent('From: ' + this.formData.email + '\n\n' + this.formData.message);
-                            const mailto = 'mailto:' + RECEIVER_EMAIL + '?subject=' + mailtoSubject + '&body=' + mailtoBody;
+                            const to = encodeURIComponent(this.config.toEmail || '');
+                            const subject = encodeURIComponent(this.formData.subject || '');
+                            const bodyLines = [];
+                            bodyLines.push('From: ' + (this.formData.email || ''));
+                            bodyLines.push('');
+                            bodyLines.push(this.formData.message || '');
+                            const body = encodeURIComponent(bodyLines.join('\n'));
+                            const mailto = 'mailto:' + to + '?subject=' + subject + '&body=' + body;
                             window.location.href = mailto;
                             this.currentStep = 3;
-                        } else {
-                            this.errorMessage = this.translations[this.currentLang].sendError;
+                            this.loading = false;
+                            return;
                         }
-                        console.error('EmailJS error:', err);
-                    } finally {
+                    } catch (err) {
+                        this.errorMessage = this.translations[this.currentLang].sendError + ' (' + (err && err.message ? err.message : 'Unknown error') + ')';
                         this.loading = false;
+                        return;
                     }
                 },
 
                 resetForm() {
-                    this.formData = { email: '', subject: '', message: '' };
+                    this.formData = {
+                        email: '',
+                        subject: '',
+                        message: ''
+                    };
                     this.hasAccepted = false;
                     this.currentStep = 1;
                     window.location.href = '/index.html';
